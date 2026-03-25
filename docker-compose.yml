@@ -1,0 +1,34 @@
+services:
+  db:
+    image: postgres:16
+    container_name: gardenmate-db
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER:-garden}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
+      POSTGRES_DB: ${DB_NAME:-gardenmate}
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gardenmate-backend
+    volumes:
+      - .:/app
+      - /app/node_modules
+    env_file:
+      - .env
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+    ports:
+      - "3001:${PORT:-3000}"
+    depends_on:
+      - db
+
+volumes:
+  postgres_data:
