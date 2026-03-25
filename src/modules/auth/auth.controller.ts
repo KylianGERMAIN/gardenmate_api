@@ -27,7 +27,7 @@ export class AuthController {
     type: ErrorResponseDTO,
   })
   @Post("register")
-  register(@Body() registerDto: RegisterDto): boolean {
-    return true;
+  async register(@Body() registerDto: RegisterDto): Promise<AuthResponseDto> {
+    return this.authService.createUser(registerDto);
   }
 }

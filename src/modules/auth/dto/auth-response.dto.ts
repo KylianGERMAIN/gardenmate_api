@@ -21,7 +21,6 @@ export class AuthResponseDto {
       example: {
         id: "123e4567-e89b-12d3-a456-426655440000",
         email: "john.doe@example.com",
-        password: "test",
         createdAt: new Date("2024-01-15"),
         updatedAt: new Date("2024-01-15"),
       },

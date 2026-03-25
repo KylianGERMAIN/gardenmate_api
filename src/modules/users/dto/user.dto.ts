@@ -16,13 +16,6 @@ export class UserDto {
     email: string;
   
     @ApiProperty({
-      description: "password",
-      example:
-        "test",
-    })
-    password: string;
-  
-    @ApiProperty({
       description: "createdAt",
       example: "2025-06-15T14:30:00.000Z",
     })
