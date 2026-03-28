@@ -1,0 +1,41 @@
+---
+description: Conventions GardenMate API
+alwaysApply: true
+---
+
+# GardenMate API
+
+NestJS 11 · TypeORM · PostgreSQL · pnpm · oxlint  
+Alias `@/*` → `src/*`. Migration progressive depuis `gardenmate_back` (Express + Prisma).
+
+## Architecture
+
+- **Controller** : HTTP uniquement, zéro logique métier
+- **Service** : logique métier, pas de `Request`/`Response`
+- **Module transversal** : une responsabilité réutilisable = un module dédié (ex: `TokenModule`)
+- **DTO input** : `class-validator` + `@ApiProperty`
+- **DTO output** : `class-transformer` (`plainToInstance`, `@Transform` pour les conversions de type)
+- **Jamais** de mapping objet littéral à la main à la place de `plainToInstance`
+- **Jamais** `synchronize: true` — utiliser les migrations TypeORM
+
+## Commentaires
+
+JSDoc sur toutes les méthodes publiques de service. Pas de commentaires qui paraphrasent le code.
+
+```typescript
+// ❌
+// Hash the password
+const hashed = await bcrypt.hash(dto.password, 10);
+
+// ✅ (seulement si non-évident)
+// Rounds = 10 : compromis sécurité/perf validé en équipe
+const hashed = await bcrypt.hash(dto.password, 10);
+```
+
+## Erreurs HTTP
+
+```typescript
+throw new ConflictException('Email already exists');    // 409
+throw new UnauthorizedException('Invalid credentials'); // 401
+throw new NotFoundException('User not found');          // 404
+```

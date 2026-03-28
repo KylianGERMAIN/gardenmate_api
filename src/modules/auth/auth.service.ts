@@ -1,27 +1,53 @@
-import { Injectable } from "@nestjs/common";
-import { AuthResponseDto } from "./dto/auth-response.dto";
-import { UserDto } from "../users/dto/user.dto";
-import { Repository } from "typeorm";
-import { UserEntity } from "../users/entities/user.entity";
+import { ConflictException, Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import * as bcrypt from "bcrypt";
+import { plainToInstance } from "class-transformer";
+import { AuthResponseDto } from "./dto/auth-response.dto";
+import { RegisterDto } from "./dto/register.dto";
+import { UserEntity } from "../users/entities/user.entity";
+import { UserDto } from "../users/dto/user.dto";
+import { TokenService } from "../token/token.service";
 
 @Injectable()
 export class AuthService {
+  constructor(
+    @InjectRepository(UserEntity)
+    private readonly userRepository: Repository<UserEntity>,
+    private readonly tokenService: TokenService,
+  ) {}
 
-    constructor(
-        @InjectRepository(UserEntity)
-        private userRepository: Repository<UserEntity>,
-      ) {}
+  /**
+   * Crée un nouvel utilisateur et retourne une paire de tokens JWT.
+   * @throws {ConflictException} si l'email est déjà utilisé
+   */
+  async createUser(registerDto: RegisterDto): Promise<AuthResponseDto> {
+    const existingUser = await this.userRepository.findOne({
+      where: { email: registerDto.email },
+    });
 
-    public async createUser(registerUser):Promise<AuthResponseDto> {
-        let authResponse:AuthResponseDto = new AuthResponseDto
-
-        const user = await this.userRepository.save(registerUser);
-
-        const { password, ...userWithoutPassword } = user;
-
-        authResponse.user = userWithoutPassword
-
-        return authResponse;
+    if (existingUser) {
+      throw new ConflictException("Email already exists");
     }
+
+    const hashedPassword = await bcrypt.hash(registerDto.password, 10);
+
+    const user = await this.userRepository.save({
+      email: registerDto.email,
+      password: hashedPassword,
+    });
+
+    const { accessToken, refreshToken } = await this.tokenService.generateTokenPair(
+      user.id,
+      user.email,
+    );
+
+    const { password: _password, ...userWithoutPassword } = user;
+
+    return plainToInstance(AuthResponseDto, {
+      accessToken,
+      refreshToken,
+      user: plainToInstance(UserDto, userWithoutPassword),
+    });
+  }
 }
