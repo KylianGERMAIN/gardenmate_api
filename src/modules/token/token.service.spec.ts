@@ -61,7 +61,7 @@ describe("TokenService", () => {
         .mockResolvedValueOnce("access.token")
         .mockResolvedValueOnce("refresh.token");
 
-      const result = await service.generateTokenPair("uuid-1", "k@test.com");
+      const result = await service.generateTokenPair("uuid-1", "k@test.com", "USER" as never);
 
       expect(mockJwtService.signAsync).toHaveBeenCalledTimes(2);
       expect(result).toEqual({ accessToken: "access.token", refreshToken: "refresh.token" });

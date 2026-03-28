@@ -1,5 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Transform } from "class-transformer";
+import { UserRole } from "@/modules/users/entities/user.entity";
 
 export class UserDto {
   @ApiProperty({
@@ -13,6 +14,9 @@ export class UserDto {
     example: "jean@hotmail.com",
   })
   email: string;
+
+  @ApiProperty({ description: "Rôle de l'utilisateur", enum: UserRole, example: UserRole.USER })
+  role: UserRole;
 
   @ApiProperty({
     description: "createdAt",
