@@ -1,5 +1,6 @@
 import { Body, Controller, HttpCode, HttpStatus, Post } from "@nestjs/common";
 import { ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
+import { Public } from "@/common/decorators/public.decorator";
 import { AuthService } from "./auth.service";
 import { AuthResponseDto } from "./dto/auth-response.dto";
 import { ErrorResponseDTO } from "@/common/dto/error-response.dto";
@@ -7,6 +8,7 @@ import { RegisterDto } from "./dto/register.dto";
 import { LoginDto } from "./dto/login.dto";
 import { RefreshDto } from "./dto/refresh.dto";
 
+@Public()
 @Controller({ path: "auth", version: "1" })
 @ApiTags("auth")
 export class AuthController {
