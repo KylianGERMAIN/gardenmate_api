@@ -1,10 +1,11 @@
 import { INestApplication, ValidationPipe, VersioningType } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { AppModule } from "@/app.module";
+import { HttpExceptionFilter } from "@/common/filters/http-exception.filter";
 
 /**
- * Instancie l'application NestJS de test avec les mêmes pipes et préfixes que `main.ts`.
- * À appeler dans `beforeAll` et fermer dans `afterAll`.
+ * Instancie l'application NestJS de test avec les mêmes pipes, filtres et préfixes
+ * que `main.ts`. À appeler dans `beforeAll` et fermer dans `afterAll`.
  */
 export async function createTestApp(): Promise<INestApplication> {
   const moduleRef = await Test.createTestingModule({
@@ -21,6 +22,7 @@ export async function createTestApp(): Promise<INestApplication> {
     }),
   );
 
+  app.useGlobalFilters(new HttpExceptionFilter());
   app.setGlobalPrefix("api");
   app.enableVersioning({ type: VersioningType.URI, defaultVersion: "1" });
 
