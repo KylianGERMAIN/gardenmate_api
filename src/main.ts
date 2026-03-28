@@ -1,29 +1,21 @@
 import { NestFactory } from '@nestjs/core';
 import { Logger, ValidationPipe, VersioningType } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module.js';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
-  if (!process.env.JWT_ACCESS_SECRET) {
-    throw new Error("JWT_ACCESS_SECRET environment variable is required");
-  }
-
-  if (!process.env.JWT_REFRESH_SECRET) {
-    throw new Error("JWT_REFRESH_SECRET environment variable is required");
-  }
-
   const app = await NestFactory.create(AppModule);
+
+  // Fail-fast : vérifie les secrets après que ConfigModule ait chargé le .env
+  const configService = app.get(ConfigService);
+  configService.getOrThrow('JWT_ACCESS_SECRET');
+  configService.getOrThrow('JWT_REFRESH_SECRET');
+
   app.enableCors({
-    origin: process.env.CORS_ORIGIN || true,
+    origin: configService.get('CORS_ORIGIN') || true,
     credentials: true,
   });
-
-  const port = Number(process.env.PORT) || 3000;
-  const config = new DocumentBuilder()
-    .setTitle("GardenMate API")
-    .setDescription("API documentation for GardenMate API")
-    .setVersion("1.0")
-    .build();
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -33,19 +25,25 @@ async function bootstrap() {
     }),
   );
 
-
-  app.setGlobalPrefix("api");
+  app.setGlobalPrefix('api');
   app.enableVersioning({
     type: VersioningType.URI,
-    defaultVersion: "1",
+    defaultVersion: '1',
   });
 
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup("api-docs", app, document);
+  const swaggerConfig = new DocumentBuilder()
+    .setTitle('GardenMate API')
+    .setDescription('API documentation for GardenMate API')
+    .setVersion('1.0')
+    .build();
 
-  Logger.log(`GardenMate API started on port ${port}`, "Bootstrap");
+  const document = SwaggerModule.createDocument(app, swaggerConfig);
+  SwaggerModule.setup('api-docs', app, document);
 
+  const port = configService.get<number>('PORT') ?? 3000;
   await app.listen(port);
+
+  Logger.log(`GardenMate API started on port ${port}`, 'Bootstrap');
 }
 
 bootstrap().catch((error) => {

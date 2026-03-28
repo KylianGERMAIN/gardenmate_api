@@ -2,11 +2,9 @@ import { Injectable } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { ConfigService } from "@nestjs/config";
 import type { JwtAccessPayload, JwtRefreshPayload } from "./interfaces/jwt-payload.interface";
+import type { TokenPair } from "./interfaces/token-pair.interface";
 
-export interface TokenPair {
-  accessToken: string;
-  refreshToken: string;
-}
+export type { TokenPair };
 
 @Injectable()
 export class TokenService {
