@@ -5,6 +5,7 @@ import { AuthResponseDto } from "./dto/auth-response.dto";
 import { ErrorResponseDTO } from "@/common/dto/error-response.dto";
 import { RegisterDto } from "./dto/register.dto";
 import { LoginDto } from "./dto/login.dto";
+import { RefreshDto } from "./dto/refresh.dto";
 
 @Controller({ path: "auth", version: "1" })
 @ApiTags("auth")
@@ -27,5 +28,14 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async login(@Body() loginDto: LoginDto): Promise<AuthResponseDto> {
     return this.authService.login(loginDto);
+  }
+
+  @ApiOperation({ summary: "Refresh token pair" })
+  @ApiResponse({ status: 200, description: "Tokens refreshed", type: AuthResponseDto })
+  @ApiResponse({ status: 401, description: "Invalid or expired refresh token", type: ErrorResponseDTO })
+  @Post("refresh")
+  @HttpCode(HttpStatus.OK)
+  async refresh(@Body() refreshDto: RefreshDto): Promise<AuthResponseDto> {
+    return this.authService.refresh(refreshDto);
   }
 }
