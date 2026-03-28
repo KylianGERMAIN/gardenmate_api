@@ -7,6 +7,7 @@ import { AppService } from './app.service.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { UsersModule } from './modules/users/users.module.js';
 import { PlantsModule } from './modules/plants/plants.module.js';
+import { UserPlantsModule } from './modules/user-plants/user-plants.module.js';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard.js';
 import { RolesGuard } from './common/guards/roles.guard.js';
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware.js';
@@ -31,6 +32,7 @@ import { RequestIdInterceptor } from './common/interceptors/request-id.intercept
     AuthModule,
     UsersModule,
     PlantsModule,
+    UserPlantsModule,
   ],
   controllers: [AppController],
   providers: [
