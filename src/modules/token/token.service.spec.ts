@@ -3,6 +3,7 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { JwtService } from "@nestjs/jwt";
 import { ConfigService } from "@nestjs/config";
 import { TokenService } from "./token.service";
+import { UserRole } from "@/modules/users/entities/user.entity";
 
 const mockJwtService = {
   signAsync: jest.fn(),
@@ -33,10 +34,14 @@ describe("TokenService", () => {
 
   describe("generateAccessToken", () => {
     it("signe avec JWT_ACCESS_SECRET et une durée de 15 minutes", async () => {
-      const result = await service.generateAccessToken({ sub: "uuid-1", email: "k@test.com" });
+      const result = await service.generateAccessToken({
+        sub: "uuid-1",
+        email: "k@test.com",
+        role: UserRole.USER,
+      });
 
       expect(mockJwtService.signAsync).toHaveBeenCalledWith(
-        { sub: "uuid-1", email: "k@test.com" },
+        { sub: "uuid-1", email: "k@test.com", role: UserRole.USER },
         { secret: "JWT_ACCESS_SECRET_value", expiresIn: "15m" },
       );
       expect(result).toBe("signed.token");
@@ -61,7 +66,7 @@ describe("TokenService", () => {
         .mockResolvedValueOnce("access.token")
         .mockResolvedValueOnce("refresh.token");
 
-      const result = await service.generateTokenPair("uuid-1", "k@test.com", "USER" as never);
+      const result = await service.generateTokenPair("uuid-1", "k@test.com", UserRole.USER);
 
       expect(mockJwtService.signAsync).toHaveBeenCalledTimes(2);
       expect(result).toEqual({ accessToken: "access.token", refreshToken: "refresh.token" });
