@@ -8,6 +8,7 @@ import { AuthModule } from './modules/auth/auth.module.js';
 import { UsersModule } from './modules/users/users.module.js';
 import { PlantsModule } from './modules/plants/plants.module.js';
 import { UserPlantsModule } from './modules/user-plants/user-plants.module.js';
+import { WateringEventsModule } from './modules/watering-events/watering-events.module.js';
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware.js';
 import { RequestIdInterceptor } from './common/interceptors/request-id.interceptor.js';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard.js';
@@ -33,6 +34,7 @@ import { RolesGuard } from './common/guards/roles.guard.js';
     UsersModule,
     PlantsModule,
     UserPlantsModule,
+    WateringEventsModule,
   ],
   controllers: [AppController],
   providers: [
