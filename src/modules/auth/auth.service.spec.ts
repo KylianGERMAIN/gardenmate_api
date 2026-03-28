@@ -1,4 +1,4 @@
-import { ConflictException, NotFoundException, UnauthorizedException } from "@nestjs/common";
+import { ConflictException, UnauthorizedException } from "@nestjs/common";
 import { Test, TestingModule } from "@nestjs/testing";
 import { getRepositoryToken } from "@nestjs/typeorm";
 import * as bcrypt from "bcrypt";
@@ -164,13 +164,13 @@ describe("AuthService", () => {
       ).rejects.toThrow(UnauthorizedException);
     });
 
-    it("lève NotFoundException si l'utilisateur n'existe plus", async () => {
+    it("lève UnauthorizedException si l'utilisateur n'existe plus en DB", async () => {
       mockTokenService.verifyRefreshToken.mockResolvedValue({ sub: "uuid-deleted" });
       mockRepository.findOne.mockResolvedValue(null);
 
       await expect(
         service.refresh({ refreshToken: "valid.token.for.deleted.user" }),
-      ).rejects.toThrow(NotFoundException);
+      ).rejects.toThrow(UnauthorizedException);
     });
   });
 });
