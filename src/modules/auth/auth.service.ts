@@ -45,18 +45,7 @@ export class AuthService {
       throw err;
     }
 
-    const { accessToken, refreshToken } = await this.tokenService.generateTokenPair(
-      user.id,
-      user.email,
-    );
-
-    const { password: _password, ...userWithoutPassword } = user;
-
-    return plainToInstance(AuthResponseDto, {
-      accessToken,
-      refreshToken,
-      user: plainToInstance(UserDto, userWithoutPassword),
-    });
+    return this.buildAuthResponse(user);
   }
 
   /**
@@ -78,6 +67,13 @@ export class AuthService {
       throw new UnauthorizedException("Invalid credentials");
     }
 
+    return this.buildAuthResponse(user);
+  }
+
+  /**
+   * Génère la réponse auth commune : tokens + user mappé sans password.
+   */
+  private async buildAuthResponse(user: UserEntity): Promise<AuthResponseDto> {
     const { accessToken, refreshToken } = await this.tokenService.generateTokenPair(
       user.id,
       user.email,
