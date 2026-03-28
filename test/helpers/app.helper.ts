@@ -4,8 +4,8 @@ import { AppModule } from "@/app.module";
 import { AllExceptionsFilter } from "@/common/filters/all-exceptions.filter";
 
 /**
- * Instancie l'application NestJS de test avec les mêmes pipes et préfixes que `main.ts`.
- * À appeler dans `beforeAll` et fermer dans `afterAll`.
+ * Instancie l'application NestJS de test avec les mêmes pipes, filtres et préfixes
+ * que `main.ts`. À appeler dans `beforeAll` et fermer dans `afterAll`.
  */
 export async function createTestApp(): Promise<INestApplication> {
   const moduleRef = await Test.createTestingModule({
