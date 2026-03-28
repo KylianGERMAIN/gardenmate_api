@@ -103,17 +103,6 @@ export class AuthService {
       throw new NotFoundException("User not found");
     }
 
-    const { accessToken, refreshToken } = await this.tokenService.generateTokenPair(
-      user.id,
-      user.email,
-    );
-
-    const { password: _password, ...userWithoutPassword } = user;
-
-    return plainToInstance(AuthResponseDto, {
-      accessToken,
-      refreshToken,
-      user: plainToInstance(UserDto, userWithoutPassword),
-    });
+    return this.buildAuthResponse(user);
   }
 }
