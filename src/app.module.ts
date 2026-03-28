@@ -38,6 +38,6 @@ import { RequestIdInterceptor } from './common/interceptors/request-id.intercept
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {
-    consumer.apply(RequestIdMiddleware).forRoutes("*");
+    consumer.apply(RequestIdMiddleware).forRoutes('*');
   }
 }
