@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
+import { ConflictException, Injectable, UnauthorizedException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import * as bcrypt from "bcrypt";
@@ -91,8 +91,7 @@ export class AuthService {
 
   /**
    * Émet une nouvelle paire de tokens à partir d'un refresh token valide (rotation).
-   * @throws {UnauthorizedException} si le refresh token est invalide ou expiré
-   * @throws {NotFoundException} si l'utilisateur associé n'existe plus
+   * @throws {UnauthorizedException} si le refresh token est invalide, expiré ou si l'utilisateur n'existe plus
    */
   async refresh(refreshDto: RefreshDto): Promise<AuthResponseDto> {
     const payload = await this.tokenService.verifyRefreshToken(refreshDto.refreshToken);
@@ -100,7 +99,7 @@ export class AuthService {
     const user = await this.userRepository.findOne({ where: { id: payload.sub } });
 
     if (!user) {
-      throw new NotFoundException("User not found");
+      throw new UnauthorizedException("Invalid or expired refresh token");
     }
 
     return this.buildAuthResponse(user);
