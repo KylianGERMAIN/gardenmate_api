@@ -3,7 +3,7 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { getRepositoryToken } from "@nestjs/typeorm";
 import * as bcrypt from "bcrypt";
 import { AuthService } from "./auth.service";
-import { UserEntity } from "@/modules/users/entities/user.entity";
+import { UserEntity, UserRole } from "@/modules/users/entities/user.entity";
 import { TokenService } from "@/modules/token/token.service";
 
 jest.mock("bcrypt");
@@ -12,6 +12,7 @@ const mockUser: UserEntity = {
   id: "uuid-1",
   email: "kylian@test.com",
   password: "hashedPassword",
+  role: UserRole.USER,
   createdAt: new Date("2024-01-15"),
   updatedAt: new Date("2024-01-15"),
 };
@@ -67,6 +68,7 @@ describe("AuthService", () => {
       expect(mockTokenService.generateTokenPair).toHaveBeenCalledWith(
         mockUser.id,
         mockUser.email,
+        mockUser.role,
       );
       expect(result.accessToken).toBe(mockTokenPair.accessToken);
       expect(result.refreshToken).toBe(mockTokenPair.refreshToken);
@@ -149,7 +151,7 @@ describe("AuthService", () => {
       const result = await service.refresh({ refreshToken: "valid.refresh.token" });
 
       expect(mockTokenService.verifyRefreshToken).toHaveBeenCalledWith("valid.refresh.token");
-      expect(mockTokenService.generateTokenPair).toHaveBeenCalledWith(mockUser.id, mockUser.email);
+      expect(mockTokenService.generateTokenPair).toHaveBeenCalledWith(mockUser.id, mockUser.email, mockUser.role);
       expect(result.accessToken).toBe(mockTokenPair.accessToken);
       expect(result.refreshToken).toBe(mockTokenPair.refreshToken);
     });

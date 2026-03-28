@@ -78,6 +78,7 @@ export class AuthService {
     const { accessToken, refreshToken } = await this.tokenService.generateTokenPair(
       user.id,
       user.email,
+      user.role,
     );
 
     const { password: _password, ...userWithoutPassword } = user;

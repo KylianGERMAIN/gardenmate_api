@@ -3,6 +3,7 @@ import { JwtService } from "@nestjs/jwt";
 import { ConfigService } from "@nestjs/config";
 import type { JwtAccessPayload, JwtRefreshPayload } from "./interfaces/jwt-payload.interface";
 import type { TokenPair } from "./interfaces/token-pair.interface";
+import type { UserRole } from "@/modules/users/entities/user.entity";
 
 export type { TokenPair };
 
@@ -39,9 +40,9 @@ export class TokenService {
    * Génère une paire access/refresh token en parallèle.
    * Point d'entrée principal pour tous les flux d'authentification.
    */
-  async generateTokenPair(userId: string, email: string): Promise<TokenPair> {
+  async generateTokenPair(userId: string, email: string, role: UserRole): Promise<TokenPair> {
     const [accessToken, refreshToken] = await Promise.all([
-      this.generateAccessToken({ sub: userId, email }),
+      this.generateAccessToken({ sub: userId, email, role }),
       this.generateRefreshToken({ sub: userId }),
     ]);
 
