@@ -1,6 +1,6 @@
 import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
-import { InjectDataSource, InjectRepository } from "@nestjs/typeorm";
-import { DataSource, Repository } from "typeorm";
+import { InjectDataSource } from "@nestjs/typeorm";
+import { DataSource } from "typeorm";
 import { plainToInstance } from "class-transformer";
 import { WateringEventEntity } from "./entities/watering-event.entity";
 import { WateringEventDto } from "./dto/watering-event.dto";
@@ -11,8 +11,6 @@ import type { JwtAccessPayload } from "@/modules/token/interfaces/jwt-payload.in
 @Injectable()
 export class WateringEventsService {
   constructor(
-    @InjectRepository(WateringEventEntity)
-    private readonly wateringEventRepository: Repository<WateringEventEntity>,
     @InjectDataSource()
     private readonly dataSource: DataSource,
   ) {}

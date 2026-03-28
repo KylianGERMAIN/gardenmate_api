@@ -1,6 +1,6 @@
 import { ForbiddenException, NotFoundException } from "@nestjs/common";
 import { Test, TestingModule } from "@nestjs/testing";
-import { getDataSourceToken, getRepositoryToken } from "@nestjs/typeorm";
+import { getDataSourceToken } from "@nestjs/typeorm";
 import { WateringEventsService } from "./watering-events.service";
 import { WateringEventEntity } from "./entities/watering-event.entity";
 import { UserPlantEntity } from "@/modules/user-plants/entities/user-plant.entity";
@@ -40,10 +40,6 @@ const mockDataSource = {
   ),
 };
 
-const mockRepository = {
-  findOne: jest.fn(),
-};
-
 describe("WateringEventsService", () => {
   let service: WateringEventsService;
 
@@ -51,7 +47,6 @@ describe("WateringEventsService", () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         WateringEventsService,
-        { provide: getRepositoryToken(WateringEventEntity), useValue: mockRepository },
         { provide: getDataSourceToken(), useValue: mockDataSource },
       ],
     }).compile();
