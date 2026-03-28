@@ -1,11 +1,13 @@
-import { Module } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard.js';
+import { RequestIdMiddleware } from './common/middleware/request-id.middleware.js';
+import { RequestIdInterceptor } from './common/interceptors/request-id.interceptor.js';
 
 @Module({
   imports: [
@@ -30,6 +32,12 @@ import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard.js';
     AppService,
     // Guard JWT appliqué globalement — utiliser @Public() pour les routes ouvertes
     { provide: APP_GUARD, useClass: JwtAuthGuard },
+    // Injecte le requestId dans toutes les réponses succès
+    { provide: APP_INTERCEPTOR, useClass: RequestIdInterceptor },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(RequestIdMiddleware).forRoutes("*");
+  }
+}
