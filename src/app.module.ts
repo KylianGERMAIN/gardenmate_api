@@ -5,9 +5,11 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { AuthModule } from './modules/auth/auth.module.js';
+import { UsersModule } from './modules/users/users.module.js';
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware.js';
 import { RequestIdInterceptor } from './common/interceptors/request-id.interceptor.js';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard.js';
+import { RolesGuard } from './common/guards/roles.guard.js';
 
 @Module({
   imports: [
@@ -26,13 +28,14 @@ import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard.js';
       }),
     }),
     AuthModule,
+    UsersModule,
   ],
   controllers: [AppController],
   providers: [
     AppService,
-    // Guard JWT appliqué globalement — utiliser @Public() pour les routes ouvertes
+    // Ordre important : JWT d'abord, puis rôles
     { provide: APP_GUARD, useClass: JwtAuthGuard },
-    // Injecte le requestId dans toutes les réponses succès
+    { provide: APP_GUARD, useClass: RolesGuard },
     { provide: APP_INTERCEPTOR, useClass: RequestIdInterceptor },
   ],
 })
