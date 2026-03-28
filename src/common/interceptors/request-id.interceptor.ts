@@ -12,8 +12,13 @@ export class RequestIdInterceptor implements NestInterceptor {
 
     return next.handle().pipe(
       map((data: unknown) => {
-        if (requestId && data !== null && typeof data === "object") {
-          return { ...data as object, requestId };
+        if (
+          requestId &&
+          data !== null &&
+          typeof data === "object" &&
+          !Array.isArray(data)
+        ) {
+          return { ...(data as object), requestId };
         }
         return data;
       }),
