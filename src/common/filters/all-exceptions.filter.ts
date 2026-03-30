@@ -7,7 +7,7 @@ import {
   Logger,
 } from "@nestjs/common";
 import { Request, Response } from "express";
-import { REQUEST_ID_HEADER } from "../middleware/request-id.middleware";
+import { REQUEST_ID_KEY } from "../middleware/request-id.middleware";
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
@@ -22,7 +22,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const req = ctx.getRequest<Request>();
     const res = ctx.getResponse<Response>();
 
-    const requestId = (req.headers[REQUEST_ID_HEADER] as string) || "unknown";
+    const requestId = (req[REQUEST_ID_KEY] as string | undefined) ?? "unknown";
 
     const { statusCode, error, message } = this.extractDetails(exception);
 
