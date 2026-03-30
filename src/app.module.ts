@@ -37,6 +37,7 @@ import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard.js';
   ],
 })
 export class AppModule implements NestModule {
+  /** Enregistre le middleware `RequestId` sur toutes les routes. */
   configure(consumer: MiddlewareConsumer): void {
     consumer.apply(RequestIdMiddleware).forRoutes('*path');
   }
