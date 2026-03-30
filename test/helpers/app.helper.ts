@@ -1,6 +1,7 @@
 import { INestApplication, ValidationPipe, VersioningType } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { AppModule } from "@/app.module";
+import { AllExceptionsFilter } from "@/common/filters/all-exceptions.filter";
 
 /**
  * Instancie l'application NestJS de test avec les mêmes pipes et préfixes que `main.ts`.
@@ -13,6 +14,7 @@ export async function createTestApp(): Promise<INestApplication> {
 
   const app = moduleRef.createNestApplication();
 
+  app.useGlobalFilters(new AllExceptionsFilter());
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
