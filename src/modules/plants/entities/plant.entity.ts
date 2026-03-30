@@ -14,7 +14,7 @@ export class PlantEntity {
   @Column({ unique: true, length: 255 })
   name: string;
 
-  @Column({ type: "enum", enum: SunlightLevel })
+  @Column({ type: "enum", enum: SunlightLevel, name: "sunlight_level" })
   sunlightLevel: SunlightLevel;
 
   /** Fréquence d'arrosage recommandée en jours (null = pas de recommandation). */
