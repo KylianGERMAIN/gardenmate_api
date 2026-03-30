@@ -34,6 +34,7 @@ const mockRepo = {
   find: jest.fn(),
   findOne: jest.fn(),
   remove: jest.fn(),
+  update: jest.fn(),
 };
 
 describe("UserPlantsService", () => {
@@ -148,6 +149,36 @@ describe("UserPlantsService", () => {
       await expect(
         service.update("user-uuid", "up-uuid", { plantedAt: "2024-01-01T00:00:00.000Z" }, owner),
       ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  // ─── waterAll ──────────────────────────────────────────────────────────────
+
+  describe("waterAll", () => {
+    it("met à jour lastWateredAt sur toutes les plantes et les retourne", async () => {
+      mockRepo.update.mockResolvedValue({ affected: 2 });
+      mockRepo.find.mockResolvedValue([mockUserPlant, { ...mockUserPlant, id: "up-uuid-2" }]);
+
+      const result = await service.waterAll("user-uuid", owner);
+
+      expect(mockRepo.update).toHaveBeenCalledWith(
+        { userId: "user-uuid" },
+        expect.objectContaining({ lastWateredAt: expect.any(Date) }),
+      );
+      expect(result).toHaveLength(2);
+    });
+
+    it("retourne un tableau vide si l'utilisateur n'a pas de plantes", async () => {
+      mockRepo.update.mockResolvedValue({ affected: 0 });
+      mockRepo.find.mockResolvedValue([]);
+
+      const result = await service.waterAll("user-uuid", owner);
+
+      expect(result).toHaveLength(0);
+    });
+
+    it("lève ForbiddenException si non propriétaire", async () => {
+      await expect(service.waterAll("user-uuid", other)).rejects.toThrow(ForbiddenException);
     });
   });
 
