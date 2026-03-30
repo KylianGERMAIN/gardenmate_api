@@ -138,16 +138,19 @@ export class UserPlantsService {
     return snapshot;
   }
 
+  /** Récupère une UserPlant par ID ou lève NotFoundException. */
   private async findUserPlantOrThrow(id: string): Promise<UserPlantEntity> {
     const userPlant = await this.userPlantRepository.findOne({ where: { id } });
     if (!userPlant) throw new NotFoundException("UserPlant not found");
     return userPlant;
   }
 
+  /** Vérifie que le demandeur est le propriétaire de la ressource. */
   private assertOwner(requester: JwtAccessPayload, userId: string): void {
     if (requester.sub !== userId) throw new ForbiddenException("Insufficient permissions");
   }
 
+  /** Vérifie que le demandeur est ADMIN ou le propriétaire de la ressource. */
   private assertAdminOrOwner(requester: JwtAccessPayload, userId: string): void {
     if (requester.role !== UserRole.ADMIN && requester.sub !== userId) {
       throw new ForbiddenException("Insufficient permissions");
