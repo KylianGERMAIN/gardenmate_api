@@ -13,6 +13,10 @@ import { REQUEST_ID_HEADER } from "../middleware/request-id.middleware";
 export class AllExceptionsFilter implements ExceptionFilter {
   private readonly logger = new Logger(AllExceptionsFilter.name);
 
+  /**
+   * Intercepte toute exception et retourne une réponse JSON uniforme
+   * avec le requestId, le timestamp et le chemin de la requête.
+   */
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const req = ctx.getRequest<Request>();
