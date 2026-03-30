@@ -1,9 +1,8 @@
+import * as dotenv from "dotenv";
 import * as path from "path";
 import { execSync } from "child_process";
 
-// Charge .env.test AVANT tout import qui lirait process.env
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-require("dotenv").config({ path: path.resolve(__dirname, "../.env.test"), override: true });
+dotenv.config({ path: path.resolve(__dirname, "../.env.test"), override: true });
 
 export default async function globalSetup() {
   const { Client } = await import("pg");
