@@ -9,6 +9,10 @@ import type { JwtAccessPayload } from "@/modules/token/interfaces/jwt-payload.in
 export class RolesGuard implements CanActivate {
   constructor(private readonly reflector: Reflector) {}
 
+  /**
+   * Vérifie que le rôle de l'utilisateur correspond aux rôles requis par le handler.
+   * @throws {ForbiddenException} si le rôle est insuffisant
+   */
   canActivate(context: ExecutionContext): boolean {
     const requiredRoles = this.reflector.getAllAndOverride<UserRole[]>(ROLES_KEY, [
       context.getHandler(),
