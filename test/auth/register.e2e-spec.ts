@@ -34,7 +34,7 @@ describe("POST /api/v1/auth/register (e2e)", () => {
       .post("/api/v1/auth/register")
       .send({ email: "alice@test.com", password: "Abcd1234!" });
 
-    const res = await request(app.getHttpServer())
+    await request(app.getHttpServer())
       .post("/api/v1/auth/register")
       .send({ email: "alice@test.com", password: "Abcd1234!" })
       .expect(409);

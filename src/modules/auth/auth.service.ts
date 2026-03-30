@@ -32,10 +32,17 @@ export class AuthService {
 
     const hashedPassword = await bcrypt.hash(registerDto.password, 10);
 
-    const user = await this.userRepository.save({
-      email: registerDto.email,
-      password: hashedPassword,
-    });
+    let user: UserEntity;
+    try {
+      user = await this.userRepository.save({
+        email: registerDto.email,
+        password: hashedPassword,
+      });
+    } catch (err: unknown) {
+      const pg = err as { code?: string };
+      if (pg.code === "23505") throw new ConflictException("Email already exists");
+      throw err;
+    }
 
     const { accessToken, refreshToken } = await this.tokenService.generateTokenPair(
       user.id,
