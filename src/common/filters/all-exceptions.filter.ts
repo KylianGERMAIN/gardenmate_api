@@ -45,6 +45,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     });
   }
 
+  /** Extrait le statusCode, le nom d'erreur et le message depuis une exception quelconque. */
   private extractDetails(exception: unknown): {
     statusCode: number;
     error: string;
