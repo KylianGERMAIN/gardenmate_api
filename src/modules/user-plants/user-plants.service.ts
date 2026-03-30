@@ -120,6 +120,21 @@ export class UserPlantsService {
   }
 
   /**
+   * Met à jour `lastWateredAt` sur toutes les plantes d'un utilisateur.
+   * @throws {ForbiddenException} si le demandeur n'est pas le propriétaire
+   */
+  async waterAll(userId: string, requester: JwtAccessPayload): Promise<UserPlantDto[]> {
+    this.assertOwner(requester, userId);
+
+    const now = new Date();
+    await this.userPlantRepository.update({ userId }, { lastWateredAt: now });
+
+    const userPlants = await this.userPlantRepository.find({ where: { userId } });
+
+    return userPlants.map((up) => plainToInstance(UserPlantDto, up));
+  }
+
+  /**
    * Supprime l'association entre un utilisateur et une plante.
    * @throws {ForbiddenException} si le demandeur n'est pas le propriétaire
    * @throws {NotFoundException} si la UserPlant n'existe pas

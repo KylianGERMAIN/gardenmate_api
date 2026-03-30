@@ -60,6 +60,18 @@ export class UserPlantsController {
     return this.userPlantsService.findNeedingWater(userId, user);
   }
 
+  @ApiOperation({ summary: "Water all plants at once (owner only)" })
+  @ApiResponse({ status: 200, type: [UserPlantDto] })
+  @ApiResponse({ status: 403, description: "Forbidden", type: ErrorResponseDTO })
+  @Post("water-all")
+  @HttpCode(HttpStatus.OK)
+  waterAll(
+    @Param("userId", ParseUUIDPipe) userId: string,
+    @CurrentUser() user: JwtAccessPayload,
+  ): Promise<UserPlantDto[]> {
+    return this.userPlantsService.waterAll(userId, user);
+  }
+
   @ApiOperation({ summary: "Update a user plant dates (owner only)" })
   @ApiResponse({ status: 200, type: UserPlantDto })
   @ApiResponse({ status: 400, description: "Bad request", type: ErrorResponseDTO })
