@@ -12,17 +12,15 @@ export class RequestIdInterceptor implements NestInterceptor {
     const requestId = request[REQUEST_ID_KEY] as string | undefined;
 
     return next.handle().pipe(
-      map((data: unknown) => {
-        if (
-          requestId &&
-          data !== null &&
-          typeof data === "object" &&
-          !Array.isArray(data)
-        ) {
-          return { ...(data as object), requestId };
-        }
-        return data;
-      }),
+      map((data: unknown) => this.appendRequestId(data, requestId)),
     );
+  }
+
+  /** Ajoute le requestId à un objet de réponse. Ignore les tableaux, null et primitifs. */
+  private appendRequestId(data: unknown, requestId: string | undefined): unknown {
+    if (!requestId || data === null || typeof data !== "object" || Array.isArray(data)) {
+      return data;
+    }
+    return { ...(data as object), requestId };
   }
 }
