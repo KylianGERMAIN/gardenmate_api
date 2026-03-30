@@ -28,6 +28,7 @@ const mockRepository = {
 
 const mockTokenService = {
   generateTokenPair: jest.fn(),
+  verifyRefreshToken: jest.fn(),
 };
 
 describe("AuthService", () => {
@@ -135,6 +136,41 @@ describe("AuthService", () => {
       expect((errorUnknownEmail as UnauthorizedException).message).toBe(
         (errorBadPassword as UnauthorizedException).message,
       );
+    });
+  });
+
+  // ─── refresh ───────────────────────────────────────────────────────────────
+
+  describe("refresh", () => {
+    it("retourne une nouvelle paire de tokens sur un refresh token valide", async () => {
+      mockTokenService.verifyRefreshToken.mockResolvedValue({ sub: mockUser.id });
+      mockRepository.findOne.mockResolvedValue(mockUser);
+
+      const result = await service.refresh({ refreshToken: "valid.refresh.token" });
+
+      expect(mockTokenService.verifyRefreshToken).toHaveBeenCalledWith("valid.refresh.token");
+      expect(mockTokenService.generateTokenPair).toHaveBeenCalledWith(mockUser.id, mockUser.email);
+      expect(result.accessToken).toBe(mockTokenPair.accessToken);
+      expect(result.refreshToken).toBe(mockTokenPair.refreshToken);
+    });
+
+    it("lève UnauthorizedException si le refresh token est invalide", async () => {
+      mockTokenService.verifyRefreshToken.mockRejectedValue(
+        new UnauthorizedException("Invalid or expired refresh token"),
+      );
+
+      await expect(
+        service.refresh({ refreshToken: "invalid.token" }),
+      ).rejects.toThrow(UnauthorizedException);
+    });
+
+    it("lève UnauthorizedException si l'utilisateur n'existe plus en DB", async () => {
+      mockTokenService.verifyRefreshToken.mockResolvedValue({ sub: "uuid-deleted" });
+      mockRepository.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.refresh({ refreshToken: "valid.token.for.deleted.user" }),
+      ).rejects.toThrow(UnauthorizedException);
     });
   });
 });

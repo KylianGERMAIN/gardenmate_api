@@ -6,6 +6,7 @@ import { plainToInstance } from "class-transformer";
 import { AuthResponseDto } from "./dto/auth-response.dto";
 import { RegisterDto } from "./dto/register.dto";
 import { LoginDto } from "./dto/login.dto";
+import { RefreshDto } from "./dto/refresh.dto";
 import { UserEntity } from "../users/entities/user.entity";
 import { UserDto } from "../users/dto/user.dto";
 import { TokenService } from "../token/token.service";
@@ -86,5 +87,21 @@ export class AuthService {
       refreshToken,
       user: plainToInstance(UserDto, userWithoutPassword),
     });
+  }
+
+  /**
+   * Émet une nouvelle paire de tokens à partir d'un refresh token valide (rotation).
+   * @throws {UnauthorizedException} si le refresh token est invalide, expiré ou si l'utilisateur n'existe plus
+   */
+  async refresh(refreshDto: RefreshDto): Promise<AuthResponseDto> {
+    const payload = await this.tokenService.verifyRefreshToken(refreshDto.refreshToken);
+
+    const user = await this.userRepository.findOne({ where: { id: payload.sub } });
+
+    if (!user) {
+      throw new UnauthorizedException("Invalid or expired refresh token");
+    }
+
+    return this.buildAuthResponse(user);
   }
 }
