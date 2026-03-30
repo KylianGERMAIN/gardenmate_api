@@ -1,10 +1,11 @@
-import { ConflictException, Injectable } from "@nestjs/common";
+import { ConflictException, Injectable, UnauthorizedException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import * as bcrypt from "bcrypt";
 import { plainToInstance } from "class-transformer";
 import { AuthResponseDto } from "./dto/auth-response.dto";
 import { RegisterDto } from "./dto/register.dto";
+import { LoginDto } from "./dto/login.dto";
 import { UserEntity } from "../users/entities/user.entity";
 import { UserDto } from "../users/dto/user.dto";
 import { TokenService } from "../token/token.service";
@@ -44,6 +45,35 @@ export class AuthService {
       throw err;
     }
 
+    return this.buildAuthResponse(user);
+  }
+
+  /**
+   * Authentifie un utilisateur et retourne une paire de tokens JWT.
+   * @throws {UnauthorizedException} si l'email est inconnu ou le mot de passe incorrect
+   */
+  async login(loginDto: LoginDto): Promise<AuthResponseDto> {
+    const user = await this.userRepository.findOne({
+      where: { email: loginDto.email },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException("Invalid credentials");
+    }
+
+    const isPasswordValid = await bcrypt.compare(loginDto.password, user.password);
+
+    if (!isPasswordValid) {
+      throw new UnauthorizedException("Invalid credentials");
+    }
+
+    return this.buildAuthResponse(user);
+  }
+
+  /**
+   * Génère la réponse auth commune : tokens + user mappé sans password.
+   */
+  private async buildAuthResponse(user: UserEntity): Promise<AuthResponseDto> {
     const { accessToken, refreshToken } = await this.tokenService.generateTokenPair(
       user.id,
       user.email,
