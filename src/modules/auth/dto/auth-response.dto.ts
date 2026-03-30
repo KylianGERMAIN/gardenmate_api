@@ -26,9 +26,4 @@ export class AuthResponseDto {
   })
   user: UserDto;
 
-  @ApiProperty({
-    description: "Identifiant unique de la requête (traçabilité)",
-    example: "308d075a-81e7-43bc-abf2-fab0226cd256",
-  })
-  requestId?: string;
 }
