@@ -11,5 +11,6 @@
   "globalSetup": "<rootDir>/test/global-setup.ts",
   "setupFiles": ["<rootDir>/test/setup-env.ts"],
   "testTimeout": 30000,
-  "forceExit": true
+  "forceExit": true,
+  "maxWorkers": 1
 }

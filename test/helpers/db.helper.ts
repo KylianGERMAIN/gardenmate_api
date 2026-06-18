@@ -1,6 +1,6 @@
 import { DataSource } from "typeorm";
 
-const ALL_TABLES = ["watering_events", "user_plants", "users", "plants"];
+const ALL_TABLES = ["user_plants", "users", "plants"];
 
 /**
  * Vide toutes les tables existantes dans la DB de test.
