@@ -1,5 +1,5 @@
 {
-  "name": "gardenmate-backend",
+  "name": "gardenmate-api",
   "version": "0.0.1",
   "private": true,
   "description": "GardenMate backend - NestJS",
