@@ -13,6 +13,8 @@ import { AssignPlantDto } from "./dto/assign-plant.dto";
 import type { UpdateUserPlantDto } from "./dto/update-user-plant.dto";
 import { CareRecommendationDto, CareStatus } from "./dto/care-recommendation.dto";
 import { CareEngineService, type CareAssessment } from "./care/care-engine.service";
+import { WeatherService } from "./weather/weather.service";
+import { UsersService } from "@/modules/users/users.service";
 import { UserRole } from "@/modules/users/entities/user.entity";
 import type { JwtAccessPayload } from "@/modules/token/interfaces/jwt-payload.interface";
 
@@ -30,6 +32,8 @@ export class UserPlantsService {
     @InjectRepository(UserPlantEntity)
     private readonly userPlantRepository: Repository<UserPlantEntity>,
     private readonly careEngine: CareEngineService,
+    private readonly weatherService: WeatherService,
+    private readonly usersService: UsersService,
   ) {}
 
   /**
@@ -79,10 +83,11 @@ export class UserPlantsService {
     this.assertAdminOrOwner(requester, userId);
 
     const now = new Date();
+    const { coefficient } = await this.resolveWaterDemand(userId, now);
     const userPlants = await this.userPlantRepository.find({ where: { userId } });
 
     return userPlants
-      .filter((up) => this.careEngine.assess(up, now).status === CareStatus.OVERDUE)
+      .filter((up) => this.careEngine.assess(up, coefficient, now).status === CareStatus.OVERDUE)
       .map((up) => plainToInstance(UserPlantDto, up));
   }
 
@@ -95,14 +100,21 @@ export class UserPlantsService {
     this.assertAdminOrOwner(requester, userId);
 
     const now = new Date();
+    const { coefficient, source } = await this.resolveWaterDemand(userId, now);
     const userPlants = await this.userPlantRepository.find({ where: { userId } });
 
     return userPlants
-      .map((up) => this.toRecommendation(up, this.careEngine.assess(up, now)))
+      .map((up) => this.toRecommendation(up, this.careEngine.assess(up, coefficient, now), source))
       .sort(
         (a, b) =>
           UserPlantsService.STATUS_ORDER[a.status] - UserPlantsService.STATUS_ORDER[b.status],
       );
+  }
+
+  /** Résout le coefficient de demande en eau de l'utilisateur (météo réelle ou saison). */
+  private async resolveWaterDemand(userId: string, now: Date) {
+    const location = await this.usersService.findLocation(userId);
+    return this.weatherService.getWaterDemand(location, now);
   }
 
   /**
@@ -179,6 +191,7 @@ export class UserPlantsService {
   private toRecommendation(
     userPlant: UserPlantEntity,
     assessment: CareAssessment,
+    source: "weather" | "season",
   ): CareRecommendationDto {
     return plainToInstance(CareRecommendationDto, {
       userPlantId: userPlant.id,
@@ -187,7 +200,7 @@ export class UserPlantsService {
       status: assessment.status,
       nextWateringDate: assessment.nextWateringDate?.toISOString() ?? null,
       adjustedIntervalDays: assessment.adjustedIntervalDays,
-      factors: assessment.factors,
+      factors: { ...assessment.factors, source },
     });
   }
 

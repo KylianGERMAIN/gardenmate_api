@@ -8,35 +8,13 @@ export interface CareAssessment {
   status: CareStatus;
   nextWateringDate: Date | null;
   adjustedIntervalDays: number | null;
-  factors: { season: number; exposure: number };
+  factors: { demand: number; exposure: number };
 }
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 /** Fenêtre (en jours) sous laquelle un arrosage à venir est signalé "SOON". */
 const SOON_WINDOW_DAYS = 2;
-
-/**
- * Coefficient saisonnier par mois (index 0 = janvier). >1 = besoin accru (été),
- * <1 = besoin réduit (hiver). Divise la fréquence de base : plus le coefficient
- * est élevé, plus l'intervalle d'arrosage est court.
- */
-// ponytail: hémisphère nord en dur. Upgrade A2 : déduire la saison de la géoloc
-// utilisateur + l'évapotranspiration réelle (Open-Meteo).
-const SEASON_COEFFICIENTS = [
-  0.6, // janvier
-  0.6, // février
-  1.1, // mars
-  1.1, // avril
-  1.1, // mai
-  1.3, // juin
-  1.3, // juillet
-  1.3, // août
-  1.0, // septembre
-  1.0, // octobre
-  1.0, // novembre
-  0.6, // décembre
-];
 
 /** Coefficient d'exposition par niveau d'ensoleillement. */
 const EXPOSURE_COEFFICIENTS: Record<SunlightLevel, number> = {
@@ -48,20 +26,21 @@ const EXPOSURE_COEFFICIENTS: Record<SunlightLevel, number> = {
 /**
  * Moteur de soin : calcule le besoin d'arrosage d'une plante.
  *
- * Moteur de règles pur — aucune dépendance, aucun I/O, déterministe pour une
- * date donnée. Toute la logique métier vit ici, isolée et entièrement testable.
+ * Moteur de règles pur — aucune dépendance, aucun I/O, déterministe. Le
+ * coefficient de demande en eau (météo réelle ou saison) lui est fourni en
+ * entrée : le moteur ignore d'où il vient, ce qui le garde entièrement testable.
  */
 @Injectable()
 export class CareEngineService {
   /**
-   * Évalue le besoin d'arrosage d'une UserPlant à une date de référence.
+   * Évalue le besoin d'arrosage d'une UserPlant.
    * @param userPlant association dont la relation `plant` est chargée (eager)
+   * @param demandCoefficient coefficient de demande en eau (>1 = besoin accru)
    * @param now date de référence — injectée pour la testabilité
    */
-  assess(userPlant: UserPlantEntity, now: Date): CareAssessment {
-    const season = SEASON_COEFFICIENTS[now.getMonth()];
+  assess(userPlant: UserPlantEntity, demandCoefficient: number, now: Date): CareAssessment {
     const exposure = EXPOSURE_COEFFICIENTS[userPlant.plant.sunlightLevel];
-    const factors = { season, exposure };
+    const factors = { demand: demandCoefficient, exposure };
 
     const baseFrequency = userPlant.plant.wateringFrequency;
 
@@ -75,7 +54,10 @@ export class CareEngineService {
       };
     }
 
-    const adjustedIntervalDays = Math.max(1, Math.round(baseFrequency / (season * exposure)));
+    const adjustedIntervalDays = Math.max(
+      1,
+      Math.round(baseFrequency / (demandCoefficient * exposure)),
+    );
 
     // Jamais arrosée : à arroser sans délai.
     if (!userPlant.lastWateredAt) {

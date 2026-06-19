@@ -14,11 +14,18 @@ export enum CareStatus {
 
 /** Coefficients appliqués par le moteur, exposés pour transparence. */
 export class CareFactorsDto {
-  @ApiProperty({ example: 1.3, description: "Coefficient saisonnier appliqué" })
-  season: number;
+  @ApiProperty({ example: 1.25, description: "Coefficient de demande en eau (météo réelle ou saison)" })
+  demand: number;
 
   @ApiProperty({ example: 1.2, description: "Coefficient d'exposition appliqué" })
   exposure: number;
+
+  @ApiProperty({
+    example: "weather",
+    enum: ["weather", "season"],
+    description: "Source du coefficient de demande",
+  })
+  source: "weather" | "season";
 }
 
 /** Recommandation d'arrosage pour une plante du jardin d'un utilisateur. */
