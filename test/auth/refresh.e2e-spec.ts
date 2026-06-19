@@ -44,4 +44,42 @@ describe("POST /api/v1/auth/refresh (e2e)", () => {
       .send({})
       .expect(400);
   });
+
+  it("rotation : l'ancien token est consommé, sa réutilisation révoque la famille", async () => {
+    const { refreshToken } = await getTokens(app);
+
+    // 1er refresh → nouvelle paire, l'ancien token est consommé.
+    const rotated = await request(app.getHttpServer())
+      .post("/api/v1/auth/refresh")
+      .send({ refreshToken })
+      .expect(200);
+    const newRefresh = rotated.body.refreshToken as string;
+    expect(newRefresh).not.toBe(refreshToken);
+
+    // Réutiliser l'ANCIEN token → 401 (réutilisation détectée).
+    await request(app.getHttpServer())
+      .post("/api/v1/auth/refresh")
+      .send({ refreshToken })
+      .expect(401);
+
+    // La détection a fait tomber toute la famille : le nouveau token est révoqué aussi.
+    await request(app.getHttpServer())
+      .post("/api/v1/auth/refresh")
+      .send({ refreshToken: newRefresh })
+      .expect(401);
+  });
+
+  it("logout révoque le refresh token (204), un refresh ultérieur échoue", async () => {
+    const { refreshToken } = await getTokens(app);
+
+    await request(app.getHttpServer())
+      .post("/api/v1/auth/logout")
+      .send({ refreshToken })
+      .expect(204);
+
+    await request(app.getHttpServer())
+      .post("/api/v1/auth/refresh")
+      .send({ refreshToken })
+      .expect(401);
+  });
 });

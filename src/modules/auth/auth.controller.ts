@@ -32,12 +32,21 @@ export class AuthController {
     return this.authService.login(loginDto);
   }
 
-  @ApiOperation({ summary: "Refresh token pair" })
+  @ApiOperation({ summary: "Refresh token pair (rotation)" })
   @ApiResponse({ status: 200, description: "Tokens refreshed", type: AuthResponseDto })
   @ApiResponse({ status: 401, description: "Invalid or expired refresh token", type: ErrorResponseDTO })
   @Post("refresh")
   @HttpCode(HttpStatus.OK)
   async refresh(@Body() refreshDto: RefreshDto): Promise<AuthResponseDto> {
     return this.authService.refresh(refreshDto);
+  }
+
+  @ApiOperation({ summary: "Logout (revoke the refresh token family)" })
+  @ApiResponse({ status: 204, description: "Logged out" })
+  @ApiResponse({ status: 401, description: "Invalid or expired refresh token", type: ErrorResponseDTO })
+  @Post("logout")
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async logout(@Body() refreshDto: RefreshDto): Promise<void> {
+    return this.authService.logout(refreshDto);
   }
 }

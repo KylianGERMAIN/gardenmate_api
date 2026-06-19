@@ -49,33 +49,24 @@ describe("TokenService", () => {
   });
 
   describe("generateRefreshToken", () => {
-    it("signe avec JWT_REFRESH_SECRET et une durée de 7 jours", async () => {
-      const result = await service.generateRefreshToken({ sub: "uuid-1" });
+    it("signe avec JWT_REFRESH_SECRET, jti/family et une durée de 7 jours", async () => {
+      const result = await service.generateRefreshToken({
+        sub: "uuid-1",
+        jti: "jti-1",
+        family: "fam-1",
+      });
 
       expect(mockJwtService.signAsync).toHaveBeenCalledWith(
-        { sub: "uuid-1" },
+        { sub: "uuid-1", jti: "jti-1", family: "fam-1" },
         { secret: "JWT_REFRESH_SECRET_value", expiresIn: "7d" },
       );
       expect(result).toBe("signed.token");
     });
   });
 
-  describe("generateTokenPair", () => {
-    it("génère access et refresh token en parallèle", async () => {
-      mockJwtService.signAsync
-        .mockResolvedValueOnce("access.token")
-        .mockResolvedValueOnce("refresh.token");
-
-      const result = await service.generateTokenPair("uuid-1", "k@test.com", UserRole.USER);
-
-      expect(mockJwtService.signAsync).toHaveBeenCalledTimes(2);
-      expect(result).toEqual({ accessToken: "access.token", refreshToken: "refresh.token" });
-    });
-  });
-
   describe("verifyRefreshToken", () => {
     it("retourne le payload sur un token valide", async () => {
-      const payload = { sub: "uuid-1" };
+      const payload = { sub: "uuid-1", jti: "jti-1", family: "fam-1" };
       mockJwtService.verifyAsync.mockResolvedValue(payload);
 
       const result = await service.verifyRefreshToken("valid.token");

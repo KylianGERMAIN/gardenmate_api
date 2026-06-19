@@ -2,10 +2,9 @@ import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { ConfigService } from "@nestjs/config";
 import type { JwtAccessPayload, JwtRefreshPayload } from "./interfaces/jwt-payload.interface";
-import type { TokenPair } from "./interfaces/token-pair.interface";
-import type { UserRole } from "@/modules/users/entities/user.entity";
 
-export type { TokenPair };
+/** Durée de vie du refresh token (doit rester alignée avec `expires_at` persisté). */
+export const REFRESH_TOKEN_TTL = "7d";
 
 @Injectable()
 export class TokenService {
@@ -16,7 +15,7 @@ export class TokenService {
 
   /**
    * Génère un access token JWT signé (durée : 15 min).
-   * Payload : `{ sub, email }`.
+   * Payload : `{ sub, email, role }`.
    */
   async generateAccessToken(payload: JwtAccessPayload): Promise<string> {
     return this.jwtService.signAsync(payload, {
@@ -27,26 +26,13 @@ export class TokenService {
 
   /**
    * Génère un refresh token JWT signé (durée : 7 jours).
-   * Payload volontairement minimal : `{ sub }` uniquement.
+   * Payload : `{ sub, jti, family }` — `jti` et `family` permettent rotation et révocation.
    */
   async generateRefreshToken(payload: JwtRefreshPayload): Promise<string> {
     return this.jwtService.signAsync(payload, {
       secret: this.configService.getOrThrow("JWT_REFRESH_SECRET"),
-      expiresIn: "7d",
+      expiresIn: REFRESH_TOKEN_TTL,
     });
-  }
-
-  /**
-   * Génère une paire access/refresh token en parallèle.
-   * Point d'entrée principal pour tous les flux d'authentification.
-   */
-  async generateTokenPair(userId: string, email: string, role: UserRole): Promise<TokenPair> {
-    const [accessToken, refreshToken] = await Promise.all([
-      this.generateAccessToken({ sub: userId, email, role }),
-      this.generateRefreshToken({ sub: userId }),
-    ]);
-
-    return { accessToken, refreshToken };
   }
 
   /**
