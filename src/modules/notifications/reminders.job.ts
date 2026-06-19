@@ -1,13 +1,13 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { Cron, CronExpression } from "@nestjs/schedule";
 import { UserPlantsService } from "@/modules/user-plants/user-plants.service";
 import { NotificationsService } from "./notifications.service";
 
 /**
- * Job planifié émettant les rappels d'arrosage.
+ * Logique des rappels d'arrosage.
  *
- * S'appuie sur le moteur de soin (via UserPlantsService) pour déterminer les
- * plantes en retard, et crée une notification idempotente par plante et par jour.
+ * Déclenchée par un scheduler **externe** (GitHub Actions cron → endpoint interne)
+ * plutôt qu'un cron in-process : ça survit aux mises en veille de l'hébergeur gratuit
+ * et découple le scheduling de l'uptime de l'application.
  */
 @Injectable()
 export class RemindersJob {
@@ -18,18 +18,10 @@ export class RemindersJob {
     private readonly notificationsService: NotificationsService,
   ) {}
 
-  /** Déclenche les rappels chaque jour à 8h. */
-  @Cron(CronExpression.EVERY_DAY_AT_8AM)
-  async sendWateringReminders(): Promise<void> {
-    const { users, reminders } = await this.run(new Date());
-    this.logger.log(`Rappels d'arrosage : ${reminders} créé(s) pour ${users} utilisateur(s)`);
-  }
-
   /**
    * Parcourt les utilisateurs possédant des plantes et crée un rappel par plante
    * dont l'arrosage est dépassé. Idempotent (déduplication en base) : rejouable
-   * le même jour sans produire de doublon. Extrait du décorateur `@Cron` pour
-   * être testable et déclenchable directement.
+   * le même jour sans produire de doublon.
    */
   async run(now: Date): Promise<{ users: number; reminders: number }> {
     const userIds = await this.userPlantsService.findUserIdsWithPlants();
@@ -43,6 +35,7 @@ export class RemindersJob {
       }
     }
 
+    this.logger.log(`Rappels d'arrosage : ${reminders} créé(s) pour ${userIds.length} utilisateur(s)`);
     return { users: userIds.length, reminders };
   }
 }

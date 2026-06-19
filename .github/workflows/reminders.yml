@@ -1,0 +1,20 @@
+name: Daily watering reminders
+
+# Scheduler externe : déclenche l'endpoint interne des rappels chaque jour à 8h UTC.
+# Découplé de l'uptime de l'hébergeur (survit aux mises en veille du plan gratuit).
+on:
+  schedule:
+    - cron: "0 8 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger reminders endpoint
+        env:
+          REMINDERS_URL: ${{ secrets.REMINDERS_URL }}
+          REMINDERS_SECRET: ${{ secrets.REMINDERS_SECRET }}
+        run: |
+          curl -fsS -X POST "$REMINDERS_URL" \
+            -H "x-internal-secret: $REMINDERS_SECRET"

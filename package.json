@@ -2,6 +2,7 @@
   "name": "gardenmate-api",
   "version": "0.0.1",
   "private": true,
+  "packageManager": "pnpm@10.30.0",
   "description": "GardenMate backend - NestJS",
   "license": "UNLICENSED",
   "author": "",
@@ -20,6 +21,7 @@
     "typeorm": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli",
     "migration:generate": "pnpm run typeorm migration:generate src/database/migrations/Migration -d src/database/data-source.ts",
     "migration:run": "pnpm run typeorm migration:run -d src/database/data-source.ts",
+    "migration:run:prod": "node ./node_modules/typeorm/cli.js migration:run -d dist/database/data-source.js",
     "migration:revert": "pnpm run typeorm migration:revert -d src/database/data-source.ts",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix"
