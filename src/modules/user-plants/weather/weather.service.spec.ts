@@ -63,4 +63,28 @@ describe("WeatherService", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
+
+  it("recharge après expiration du cache (TTL dépassé)", async () => {
+    mockEt0Once([4.2, 4.2]);
+    mockEt0Once([4.2, 4.2]);
+    const later = new Date(NOW.getTime() + 7 * 60 * 60 * 1000); // +7 h > TTL 6 h
+
+    await service.getWaterDemand(PARIS, NOW);
+    await service.getWaterDemand(PARIS, later);
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("décale la saison pour l'hémisphère sud en repli", async () => {
+    fetchMock.mockRejectedValue(new Error("network down"));
+    const north = { latitude: 48.86, longitude: 2.35 };
+    const south = { latitude: -33.87, longitude: 151.21 };
+
+    const resNorth = await service.getWaterDemand(north, NOW); // juillet, été nord
+    const resSouth = await service.getWaterDemand(south, NOW); // juillet, hiver sud
+
+    expect(resNorth.source).toBe("season");
+    expect(resSouth.source).toBe("season");
+    expect(resSouth.coefficient).toBeLessThan(resNorth.coefficient);
+  });
 });
