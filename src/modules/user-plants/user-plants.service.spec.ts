@@ -3,6 +3,8 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { getRepositoryToken } from "@nestjs/typeorm";
 import { UserPlantsService } from "./user-plants.service";
 import { UserPlantEntity } from "./entities/user-plant.entity";
+import { CareEngineService } from "./care/care-engine.service";
+import { CareStatus } from "./dto/care-recommendation.dto";
 import { SunlightLevel } from "@/modules/plants/entities/plant.entity";
 import { UserRole } from "@/modules/users/entities/user.entity";
 import type { JwtAccessPayload } from "@/modules/token/interfaces/jwt-payload.interface";
@@ -44,6 +46,7 @@ describe("UserPlantsService", () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UserPlantsService,
+        CareEngineService,
         { provide: getRepositoryToken(UserPlantEntity), useValue: mockRepo },
       ],
     }).compile();
@@ -104,15 +107,25 @@ describe("UserPlantsService", () => {
 
   describe("findNeedingWater", () => {
     it("retourne uniquement les plantes en manque d'eau", async () => {
+      // Écart franc (60 j) : OVERDUE quels que soient les coefficients saison/exposition.
       const oldWatering: UserPlantEntity = {
         ...mockUserPlant,
-        lastWateredAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000),
+        lastWateredAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000),
       };
       mockRepo.find.mockResolvedValue([oldWatering]);
 
       const result = await service.findNeedingWater("user-uuid", owner);
 
       expect(result).toHaveLength(1);
+    });
+
+    it("exclut les plantes arrosées récemment", async () => {
+      const freshlyWatered: UserPlantEntity = { ...mockUserPlant, lastWateredAt: new Date() };
+      mockRepo.find.mockResolvedValue([freshlyWatered]);
+
+      const result = await service.findNeedingWater("user-uuid", owner);
+
+      expect(result).toHaveLength(0);
     });
 
     it("admin peut accéder aux plantes d'un autre utilisateur", async () => {
@@ -123,6 +136,33 @@ describe("UserPlantsService", () => {
 
     it("lève ForbiddenException si non admin et non propriétaire", async () => {
       await expect(service.findNeedingWater("user-uuid", other)).rejects.toThrow(ForbiddenException);
+    });
+  });
+
+  // ─── getCarePlan ─────────────────────────────────────────────────────────────
+
+  describe("getCarePlan", () => {
+    it("retourne une recommandation par plante, triée par urgence", async () => {
+      const never: UserPlantEntity = { ...mockUserPlant, id: "never", lastWateredAt: null };
+      // Fréquence longue (30 j) → statut OK garanti quelle que soit la saison.
+      const fresh: UserPlantEntity = {
+        ...mockUserPlant,
+        id: "fresh",
+        lastWateredAt: new Date(),
+        plant: { ...mockPlant, wateringFrequency: 30 } as never,
+      };
+      mockRepo.find.mockResolvedValue([fresh, never]);
+
+      const result = await service.getCarePlan("user-uuid", owner);
+
+      expect(result).toHaveLength(2);
+      expect(result[0].status).toBe(CareStatus.OVERDUE);
+      expect(result[0].userPlantId).toBe("never");
+      expect(result[1].status).toBe(CareStatus.OK);
+    });
+
+    it("lève ForbiddenException si non admin et non propriétaire", async () => {
+      await expect(service.getCarePlan("user-uuid", other)).rejects.toThrow(ForbiddenException);
     });
   });
 

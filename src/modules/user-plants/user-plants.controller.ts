@@ -15,6 +15,7 @@ import { UserPlantsService } from "./user-plants.service";
 import { UserPlantDto } from "./dto/user-plant.dto";
 import { AssignPlantDto } from "./dto/assign-plant.dto";
 import { UpdateUserPlantDto } from "./dto/update-user-plant.dto";
+import { CareRecommendationDto } from "./dto/care-recommendation.dto";
 import { CurrentUser } from "@/common/decorators/current-user.decorator";
 import { ErrorResponseDTO } from "@/common/dto/error-response.dto";
 import type { JwtAccessPayload } from "@/modules/token/interfaces/jwt-payload.interface";
@@ -58,6 +59,17 @@ export class UserPlantsController {
     @CurrentUser() user: JwtAccessPayload,
   ): Promise<UserPlantDto[]> {
     return this.userPlantsService.findNeedingWater(userId, user);
+  }
+
+  @ApiOperation({ summary: "Get the watering care plan, sorted by urgency (admin or owner)" })
+  @ApiResponse({ status: 200, type: [CareRecommendationDto] })
+  @ApiResponse({ status: 403, description: "Forbidden", type: ErrorResponseDTO })
+  @Get("care-plan")
+  getCarePlan(
+    @Param("userId", ParseUUIDPipe) userId: string,
+    @CurrentUser() user: JwtAccessPayload,
+  ): Promise<CareRecommendationDto[]> {
+    return this.userPlantsService.getCarePlan(userId, user);
   }
 
   @ApiOperation({ summary: "Water all plants at once (owner only)" })

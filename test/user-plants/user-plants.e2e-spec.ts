@@ -164,6 +164,46 @@ describe("UserPlantsController (e2e)", () => {
     });
   });
 
+  // ─── GET /api/v1/users/:userId/plants/care-plan ──────────────────────────
+
+  describe("GET /api/v1/users/:userId/plants/care-plan", () => {
+    it("200 – plante jamais arrosée → OVERDUE avec facteurs et intervalle", async () => {
+      const { adminToken, adminId, plantId } = await setupAdminAndPlant(app, ds);
+
+      await request(app.getHttpServer())
+        .post(`/api/v1/users/${adminId}/plants`)
+        .set(bearer(adminToken))
+        .send({ plantId })
+        .expect(201);
+
+      const res = await request(app.getHttpServer())
+        .get(`/api/v1/users/${adminId}/plants/care-plan`)
+        .set(bearer(adminToken))
+        .expect(200);
+
+      expect(res.body).toHaveLength(1);
+      expect(res.body[0].status).toBe("OVERDUE");
+      expect(res.body[0].plantName).toBe("Ficus lyrata");
+      expect(res.body[0].adjustedIntervalDays).toBeGreaterThan(0);
+      expect(res.body[0].factors).toEqual(
+        expect.objectContaining({ season: expect.any(Number), exposure: expect.any(Number) }),
+      );
+    });
+
+    it("403 – autre user ne peut pas voir le plan de soin d'autrui", async () => {
+      const { adminId } = await setupAdminAndPlant(app, ds);
+      const { accessToken: otherToken } = await getTokens(app, {
+        email: "other@test.com",
+        password: "Abcd1234!",
+      });
+
+      await request(app.getHttpServer())
+        .get(`/api/v1/users/${adminId}/plants/care-plan`)
+        .set(bearer(otherToken))
+        .expect(403);
+    });
+  });
+
   // ─── PATCH /api/v1/users/:userId/plants/:userPlantId ─────────────────────
 
   describe("PATCH /api/v1/users/:userId/plants/:userPlantId", () => {

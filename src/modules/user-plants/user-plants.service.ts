@@ -11,14 +11,25 @@ import { UserPlantEntity } from "./entities/user-plant.entity";
 import { UserPlantDto } from "./dto/user-plant.dto";
 import { AssignPlantDto } from "./dto/assign-plant.dto";
 import type { UpdateUserPlantDto } from "./dto/update-user-plant.dto";
+import { CareRecommendationDto, CareStatus } from "./dto/care-recommendation.dto";
+import { CareEngineService, type CareAssessment } from "./care/care-engine.service";
 import { UserRole } from "@/modules/users/entities/user.entity";
 import type { JwtAccessPayload } from "@/modules/token/interfaces/jwt-payload.interface";
 
 @Injectable()
 export class UserPlantsService {
+  /** Ordre de tri du plan de soin : du plus urgent au moins urgent. */
+  private static readonly STATUS_ORDER: Record<CareStatus, number> = {
+    [CareStatus.OVERDUE]: 0,
+    [CareStatus.SOON]: 1,
+    [CareStatus.OK]: 2,
+    [CareStatus.NO_SCHEDULE]: 3,
+  };
+
   constructor(
     @InjectRepository(UserPlantEntity)
     private readonly userPlantRepository: Repository<UserPlantEntity>,
+    private readonly careEngine: CareEngineService,
   ) {}
 
   /**
@@ -60,27 +71,38 @@ export class UserPlantsService {
   }
 
   /**
-   * Retourne les plantes d'un utilisateur nécessitant un arrosage.
-   * Une plante a besoin d'eau si `wateringFrequency` est définie et que `lastWateredAt`
-   * est null ou dépasse la fréquence recommandée.
+   * Retourne les plantes d'un utilisateur dont l'arrosage est dépassé (statut OVERDUE),
+   * d'après le moteur de soin (fréquence ajustée selon saison et exposition).
    * @throws {ForbiddenException} si le demandeur n'est ni admin ni le propriétaire
    */
   async findNeedingWater(userId: string, requester: JwtAccessPayload): Promise<UserPlantDto[]> {
     this.assertAdminOrOwner(requester, userId);
 
+    const now = new Date();
     const userPlants = await this.userPlantRepository.find({ where: { userId } });
 
-    const now = Date.now();
+    return userPlants
+      .filter((up) => this.careEngine.assess(up, now).status === CareStatus.OVERDUE)
+      .map((up) => plainToInstance(UserPlantDto, up));
+  }
 
-    const filtered = userPlants.filter((up) => {
-      const freq = up.plant?.wateringFrequency;
-      if (!freq) return false;
-      if (!up.lastWateredAt) return true;
-      const msPerDay = 24 * 60 * 60 * 1000;
-      return now - up.lastWateredAt.getTime() >= freq * msPerDay;
-    });
+  /**
+   * Calcule le plan de soin d'un utilisateur : une recommandation d'arrosage par
+   * plante, triée du plus urgent au moins urgent.
+   * @throws {ForbiddenException} si le demandeur n'est ni admin ni le propriétaire
+   */
+  async getCarePlan(userId: string, requester: JwtAccessPayload): Promise<CareRecommendationDto[]> {
+    this.assertAdminOrOwner(requester, userId);
 
-    return filtered.map((up) => plainToInstance(UserPlantDto, up));
+    const now = new Date();
+    const userPlants = await this.userPlantRepository.find({ where: { userId } });
+
+    return userPlants
+      .map((up) => this.toRecommendation(up, this.careEngine.assess(up, now)))
+      .sort(
+        (a, b) =>
+          UserPlantsService.STATUS_ORDER[a.status] - UserPlantsService.STATUS_ORDER[b.status],
+      );
   }
 
   /**
@@ -151,6 +173,22 @@ export class UserPlantsService {
     const snapshot = plainToInstance(UserPlantDto, { ...userPlant, id: userPlantId });
     await this.userPlantRepository.remove(userPlant);
     return snapshot;
+  }
+
+  /** Mappe une UserPlant et son évaluation vers le DTO de recommandation. */
+  private toRecommendation(
+    userPlant: UserPlantEntity,
+    assessment: CareAssessment,
+  ): CareRecommendationDto {
+    return plainToInstance(CareRecommendationDto, {
+      userPlantId: userPlant.id,
+      plantId: userPlant.plantId,
+      plantName: userPlant.plant.name,
+      status: assessment.status,
+      nextWateringDate: assessment.nextWateringDate?.toISOString() ?? null,
+      adjustedIntervalDays: assessment.adjustedIntervalDays,
+      factors: assessment.factors,
+    });
   }
 
   /** Récupère une UserPlant par ID ou lève NotFoundException. */
