@@ -1,0 +1,89 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Annule les runs obsolètes d'une même branche/PR pour ne pas empiler les builds.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "24"
+  PNPM_VERSION: "10"
+
+jobs:
+  quality:
+    name: Lint · Build · Unit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm run lint
+
+      - name: Build
+        run: pnpm run build
+
+      - name: Unit tests
+        run: pnpm test
+
+  e2e:
+    name: E2E (Postgres)
+    runs-on: ubuntu-latest
+
+    # Port 5434:5432 + creds garden/secret/gardenmate : le .env.test versionné
+    # marche tel quel, zéro divergence entre local et CI.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: garden
+          POSTGRES_PASSWORD: secret
+          POSTGRES_DB: gardenmate
+        ports:
+          - 5434:5432
+        options: >-
+          --health-cmd "pg_isready -U garden -d gardenmate"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: E2E tests
+        run: pnpm run test:e2e
