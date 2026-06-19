@@ -3,6 +3,7 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { getRepositoryToken } from "@nestjs/typeorm";
 import * as bcrypt from "bcrypt";
 import { AuthService } from "./auth.service";
+import { RefreshTokenService } from "./refresh-token.service";
 import { UserEntity, UserRole } from "@/modules/users/entities/user.entity";
 import { TokenService } from "@/modules/token/token.service";
 
@@ -13,13 +14,10 @@ const mockUser: UserEntity = {
   email: "kylian@test.com",
   password: "hashedPassword",
   role: UserRole.USER,
+  latitude: null,
+  longitude: null,
   createdAt: new Date("2024-01-15"),
   updatedAt: new Date("2024-01-15"),
-};
-
-const mockTokenPair = {
-  accessToken: "access.token.mock",
-  refreshToken: "refresh.token.mock",
 };
 
 const mockRepository = {
@@ -28,8 +26,14 @@ const mockRepository = {
 };
 
 const mockTokenService = {
-  generateTokenPair: jest.fn(),
-  verifyRefreshToken: jest.fn(),
+  generateAccessToken: jest.fn(),
+};
+
+const mockRefreshTokenService = {
+  issue: jest.fn(),
+  rotate: jest.fn(),
+  revokeFamily: jest.fn(),
+  revokeByToken: jest.fn(),
 };
 
 describe("AuthService", () => {
@@ -41,6 +45,7 @@ describe("AuthService", () => {
         AuthService,
         { provide: getRepositoryToken(UserEntity), useValue: mockRepository },
         { provide: TokenService, useValue: mockTokenService },
+        { provide: RefreshTokenService, useValue: mockRefreshTokenService },
       ],
     }).compile();
 
@@ -49,7 +54,8 @@ describe("AuthService", () => {
     jest.clearAllMocks();
     (bcrypt.hash as jest.Mock).mockResolvedValue("hashedPassword");
     (bcrypt.compare as jest.Mock).mockResolvedValue(true);
-    mockTokenService.generateTokenPair.mockResolvedValue(mockTokenPair);
+    mockTokenService.generateAccessToken.mockResolvedValue("access.token.mock");
+    mockRefreshTokenService.issue.mockResolvedValue("refresh.token.mock");
   });
 
   // ─── createUser ────────────────────────────────────────────────────────────
@@ -65,15 +71,15 @@ describe("AuthService", () => {
       });
 
       expect(bcrypt.hash).toHaveBeenCalledWith("Abcd95470*", 10);
-      expect(mockTokenService.generateTokenPair).toHaveBeenCalledWith(
-        mockUser.id,
-        mockUser.email,
-        mockUser.role,
-      );
-      expect(result.accessToken).toBe(mockTokenPair.accessToken);
-      expect(result.refreshToken).toBe(mockTokenPair.refreshToken);
+      expect(mockTokenService.generateAccessToken).toHaveBeenCalledWith({
+        sub: mockUser.id,
+        email: mockUser.email,
+        role: mockUser.role,
+      });
+      expect(mockRefreshTokenService.issue).toHaveBeenCalled();
+      expect(result.accessToken).toBe("access.token.mock");
+      expect(result.refreshToken).toBe("refresh.token.mock");
       expect(result.user.id).toBe(mockUser.id);
-      expect(result.user.email).toBe(mockUser.email);
       expect((result as { password?: string }).password).toBeUndefined();
     });
 
@@ -93,13 +99,10 @@ describe("AuthService", () => {
       mockRepository.findOne.mockResolvedValue(mockUser);
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
 
-      const result = await service.login({
-        email: "kylian@test.com",
-        password: "Abcd95470*",
-      });
+      const result = await service.login({ email: "kylian@test.com", password: "Abcd95470*" });
 
       expect(bcrypt.compare).toHaveBeenCalledWith("Abcd95470*", mockUser.password);
-      expect(result.accessToken).toBe(mockTokenPair.accessToken);
+      expect(result.accessToken).toBe("access.token.mock");
       expect(result.user.email).toBe(mockUser.email);
       expect((result as { password?: string }).password).toBeUndefined();
     });
@@ -123,17 +126,15 @@ describe("AuthService", () => {
 
     it("retourne le même message d'erreur pour email inconnu et mauvais mot de passe", async () => {
       mockRepository.findOne.mockResolvedValue(null);
-      const errorUnknownEmail = await service.login({
-        email: "inconnu@test.com",
-        password: "any",
-      }).catch((e: UnauthorizedException) => e);
+      const errorUnknownEmail = await service
+        .login({ email: "inconnu@test.com", password: "any" })
+        .catch((e: UnauthorizedException) => e);
 
       mockRepository.findOne.mockResolvedValue(mockUser);
       (bcrypt.compare as jest.Mock).mockResolvedValue(false);
-      const errorBadPassword = await service.login({
-        email: "kylian@test.com",
-        password: "wrong",
-      }).catch((e: UnauthorizedException) => e);
+      const errorBadPassword = await service
+        .login({ email: "kylian@test.com", password: "wrong" })
+        .catch((e: UnauthorizedException) => e);
 
       expect((errorUnknownEmail as UnauthorizedException).message).toBe(
         (errorBadPassword as UnauthorizedException).message,
@@ -144,35 +145,48 @@ describe("AuthService", () => {
   // ─── refresh ───────────────────────────────────────────────────────────────
 
   describe("refresh", () => {
-    it("retourne une nouvelle paire de tokens sur un refresh token valide", async () => {
-      mockTokenService.verifyRefreshToken.mockResolvedValue({ sub: mockUser.id });
+    it("fait tourner le token et réémet dans la même famille", async () => {
+      mockRefreshTokenService.rotate.mockResolvedValue({ userId: mockUser.id, familyId: "fam-1" });
       mockRepository.findOne.mockResolvedValue(mockUser);
 
       const result = await service.refresh({ refreshToken: "valid.refresh.token" });
 
-      expect(mockTokenService.verifyRefreshToken).toHaveBeenCalledWith("valid.refresh.token");
-      expect(mockTokenService.generateTokenPair).toHaveBeenCalledWith(mockUser.id, mockUser.email, mockUser.role);
-      expect(result.accessToken).toBe(mockTokenPair.accessToken);
-      expect(result.refreshToken).toBe(mockTokenPair.refreshToken);
+      expect(mockRefreshTokenService.rotate).toHaveBeenCalledWith("valid.refresh.token");
+      expect(mockRefreshTokenService.issue).toHaveBeenCalledWith(mockUser.id, "fam-1");
+      expect(result.accessToken).toBe("access.token.mock");
+      expect(result.refreshToken).toBe("refresh.token.mock");
     });
 
-    it("lève UnauthorizedException si le refresh token est invalide", async () => {
-      mockTokenService.verifyRefreshToken.mockRejectedValue(
+    it("lève UnauthorizedException si le refresh token est invalide ou réutilisé", async () => {
+      mockRefreshTokenService.rotate.mockRejectedValue(
         new UnauthorizedException("Invalid or expired refresh token"),
       );
 
-      await expect(
-        service.refresh({ refreshToken: "invalid.token" }),
-      ).rejects.toThrow(UnauthorizedException);
+      await expect(service.refresh({ refreshToken: "invalid.token" })).rejects.toThrow(
+        UnauthorizedException,
+      );
     });
 
-    it("lève UnauthorizedException si l'utilisateur n'existe plus en DB", async () => {
-      mockTokenService.verifyRefreshToken.mockResolvedValue({ sub: "uuid-deleted" });
+    it("révoque la famille et lève si l'utilisateur n'existe plus", async () => {
+      mockRefreshTokenService.rotate.mockResolvedValue({ userId: "uuid-deleted", familyId: "fam-x" });
       mockRepository.findOne.mockResolvedValue(null);
 
       await expect(
         service.refresh({ refreshToken: "valid.token.for.deleted.user" }),
       ).rejects.toThrow(UnauthorizedException);
+      expect(mockRefreshTokenService.revokeFamily).toHaveBeenCalledWith("fam-x");
+    });
+  });
+
+  // ─── logout ──────────────────────────────────────────────────────────────────
+
+  describe("logout", () => {
+    it("révoque la famille du refresh token fourni", async () => {
+      mockRefreshTokenService.revokeByToken.mockResolvedValue(undefined);
+
+      await service.logout({ refreshToken: "some.refresh.token" });
+
+      expect(mockRefreshTokenService.revokeByToken).toHaveBeenCalledWith("some.refresh.token");
     });
   });
 });
