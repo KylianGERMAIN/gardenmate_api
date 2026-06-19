@@ -38,7 +38,7 @@ export class UserPlantsController {
     return this.userPlantsService.assign(userId, dto, user);
   }
 
-  @ApiOperation({ summary: "List user plants (owner only)" })
+  @ApiOperation({ summary: "List user plants (admin or owner)" })
   @ApiResponse({ status: 200, type: [UserPlantDto] })
   @ApiResponse({ status: 403, description: "Forbidden", type: ErrorResponseDTO })
   @Get()
