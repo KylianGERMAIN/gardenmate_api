@@ -108,6 +108,32 @@ export class UserPlantsService {
   }
 
   /**
+   * IDs distincts des utilisateurs possédant au moins une plante.
+   * Usage système (job de rappels), sans contrôle d'autorisation.
+   */
+  async findUserIdsWithPlants(): Promise<string[]> {
+    const rows = await this.userPlantRepository
+      .createQueryBuilder("up")
+      .select("up.userId", "userId")
+      .distinct(true)
+      .getRawMany<{ userId: string }>();
+
+    return rows.map((row) => row.userId);
+  }
+
+  /**
+   * Plantes d'un utilisateur dont l'arrosage est dépassé (statut OVERDUE).
+   * Usage système (job de rappels), sans contrôle d'autorisation.
+   */
+  async collectOverdue(userId: string, now: Date): Promise<UserPlantEntity[]> {
+    const { assessments } = await this.buildAssessments(userId, now);
+
+    return assessments
+      .filter(({ assessment }) => assessment.status === CareStatus.OVERDUE)
+      .map(({ userPlant }) => userPlant);
+  }
+
+  /**
    * Évalue toutes les plantes d'un utilisateur via le moteur de soin, le coefficient
    * de demande en eau étant résolu une seule fois (météo réelle ou repli saisonnier).
    * Source unique de calcul partagée par `findNeedingWater` et `getCarePlan`.
