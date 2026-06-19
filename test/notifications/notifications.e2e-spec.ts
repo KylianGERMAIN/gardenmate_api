@@ -55,10 +55,10 @@ describe("Notifications + reminders job (e2e)", () => {
       .set(bearer(token))
       .expect(200);
 
-    expect(res.body).toHaveLength(1);
-    expect(res.body[0].type).toBe("WATERING_REMINDER");
-    expect(res.body[0].isRead).toBe(false);
-    const notificationId = res.body[0].id as string;
+    expect(res.body.items).toHaveLength(1);
+    expect(res.body.items[0].type).toBe("WATERING_REMINDER");
+    expect(res.body.items[0].isRead).toBe(false);
+    const notificationId = res.body.items[0].id as string;
 
     // Rejeu le même jour → la déduplication en base empêche tout doublon.
     await job.run(new Date());
@@ -66,7 +66,7 @@ describe("Notifications + reminders job (e2e)", () => {
       .get(`/api/v1/users/${userId}/notifications`)
       .set(bearer(token))
       .expect(200);
-    expect(res.body).toHaveLength(1);
+    expect(res.body.items).toHaveLength(1);
 
     // Marquer comme lue.
     const read = await request(app.getHttpServer())

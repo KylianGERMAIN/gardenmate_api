@@ -18,6 +18,7 @@ import { PlantQueryDto } from "./dto/plant-query.dto";
 import { Roles } from "@/common/decorators/roles.decorator";
 import { UserRole } from "@/modules/users/entities/user.entity";
 import { ErrorResponseDTO } from "@/common/dto/error-response.dto";
+import { PaginatedDto } from "@/common/dto/paginated.dto";
 
 @ApiBearerAuth()
 @ApiTags("plants")
@@ -25,10 +26,10 @@ import { ErrorResponseDTO } from "@/common/dto/error-response.dto";
 export class PlantsController {
   constructor(private readonly plantsService: PlantsService) {}
 
-  @ApiOperation({ summary: "List plants (authenticated)" })
-  @ApiResponse({ status: 200, type: [PlantDto] })
+  @ApiOperation({ summary: "List plants, paginated (authenticated)" })
+  @ApiResponse({ status: 200, type: PaginatedDto })
   @Get()
-  findAll(@Query() query: PlantQueryDto): Promise<PlantDto[]> {
+  findAll(@Query() query: PlantQueryDto): Promise<PaginatedDto<PlantDto>> {
     return this.plantsService.findAll(query);
   }
 

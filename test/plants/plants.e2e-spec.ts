@@ -50,7 +50,8 @@ describe("PlantsController (e2e)", () => {
         .set(bearer(accessToken))
         .expect(200);
 
-      expect(Array.isArray(res.body)).toBe(true);
+      expect(Array.isArray(res.body.items)).toBe(true);
+      expect(res.body.meta.total).toBe(0);
     });
 
     it("200 – filtre par nom (query ?name=)", async () => {
@@ -71,8 +72,30 @@ describe("PlantsController (e2e)", () => {
         .set(bearer(accessToken))
         .expect(200);
 
-      expect(res.body).toHaveLength(1);
-      expect(res.body[0].name).toBe("Ficus lyrata");
+      expect(res.body.items).toHaveLength(1);
+      expect(res.body.items[0].name).toBe("Ficus lyrata");
+    });
+
+    it("200 – pagination (limit + meta)", async () => {
+      const { accessToken } = await getAdminTokens(app, ds);
+
+      for (const name of ["Aloe", "Basilic", "Cactus"]) {
+        await request(app.getHttpServer())
+          .post("/api/v1/plants")
+          .set(bearer(accessToken))
+          .send({ name, sunlightLevel: "FULL_SUN" })
+          .expect(201);
+      }
+
+      const res = await request(app.getHttpServer())
+        .get("/api/v1/plants?page=1&limit=2")
+        .set(bearer(accessToken))
+        .expect(200);
+
+      expect(res.body.items).toHaveLength(2);
+      expect(res.body.meta).toEqual({ total: 3, page: 1, limit: 2, pageCount: 2 });
+      // Tri stable par nom → première page = Aloe, Basilic
+      expect(res.body.items[0].name).toBe("Aloe");
     });
 
     it("401 – sans token", async () => {

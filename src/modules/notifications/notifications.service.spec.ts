@@ -17,9 +17,11 @@ const NOW = new Date("2026-07-15T08:00:00.000Z");
 const mockRepo = {
   create: jest.fn((x: unknown) => x),
   save: jest.fn(),
-  find: jest.fn(),
+  findAndCount: jest.fn(),
   findOne: jest.fn(),
 };
+
+const PAGINATION = { page: 1, limit: 20 };
 
 describe("NotificationsService", () => {
   let service: NotificationsService;
@@ -72,22 +74,30 @@ describe("NotificationsService", () => {
   });
 
   describe("findAll", () => {
-    it("retourne les notifications du propriétaire", async () => {
-      mockRepo.find.mockResolvedValue([{ id: "n1", type: NotificationType.WATERING_REMINDER }]);
+    it("retourne une page de notifications du propriétaire", async () => {
+      mockRepo.findAndCount.mockResolvedValue([
+        [{ id: "n1", type: NotificationType.WATERING_REMINDER }],
+        1,
+      ]);
 
-      const res = await service.findAll("user-uuid", owner);
+      const res = await service.findAll("user-uuid", owner, PAGINATION);
 
-      expect(res).toHaveLength(1);
+      expect(res.items).toHaveLength(1);
+      expect(res.meta.total).toBe(1);
     });
 
     it("autorise l'admin", async () => {
-      mockRepo.find.mockResolvedValue([]);
+      mockRepo.findAndCount.mockResolvedValue([[], 0]);
 
-      await expect(service.findAll("user-uuid", admin)).resolves.toEqual([]);
+      const res = await service.findAll("user-uuid", admin, PAGINATION);
+
+      expect(res.items).toEqual([]);
     });
 
     it("refuse un autre utilisateur", async () => {
-      await expect(service.findAll("user-uuid", other)).rejects.toThrow(ForbiddenException);
+      await expect(service.findAll("user-uuid", other, PAGINATION)).rejects.toThrow(
+        ForbiddenException,
+      );
     });
   });
 

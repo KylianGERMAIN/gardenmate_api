@@ -6,6 +6,7 @@ import { PlantEntity } from "./entities/plant.entity";
 import { PlantDto } from "./dto/plant.dto";
 import { CreatePlantDto } from "./dto/create-plant.dto";
 import type { PlantQueryDto } from "./dto/plant-query.dto";
+import { paginate, type PaginatedDto } from "@/common/dto/paginated.dto";
 
 @Injectable()
 export class PlantsService {
@@ -15,17 +16,25 @@ export class PlantsService {
   ) {}
 
   /**
-   * Retourne la liste des plantes avec filtres optionnels sur le niveau de soleil et le nom.
+   * Retourne la liste paginée des plantes, avec filtres optionnels sur le niveau
+   * de soleil et le nom. Tri stable par nom (indispensable à une pagination cohérente).
    */
-  async findAll(query: PlantQueryDto): Promise<PlantDto[]> {
-    const plants = await this.plantRepository.find({
+  async findAll(query: PlantQueryDto): Promise<PaginatedDto<PlantDto>> {
+    const [plants, total] = await this.plantRepository.findAndCount({
       where: {
         ...(query.sunlightLevel && { sunlightLevel: query.sunlightLevel }),
         ...(query.name && { name: ILike(`%${query.name}%`) }),
       },
+      order: { name: "ASC" },
+      skip: (query.page - 1) * query.limit,
+      take: query.limit,
     });
 
-    return plants.map((p) => plainToInstance(PlantDto, p));
+    return paginate(
+      plants.map((p) => plainToInstance(PlantDto, p)),
+      total,
+      query,
+    );
   }
 
   /**
