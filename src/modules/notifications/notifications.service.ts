@@ -6,6 +6,8 @@ import { NotificationEntity, NotificationType } from "./entities/notification.en
 import { NotificationDto } from "./dto/notification.dto";
 import { UserPlantEntity } from "@/modules/user-plants/entities/user-plant.entity";
 import { UserRole } from "@/modules/users/entities/user.entity";
+import { paginate, type PaginatedDto } from "@/common/dto/paginated.dto";
+import type { PaginationQueryDto } from "@/common/dto/pagination-query.dto";
 import type { JwtAccessPayload } from "@/modules/token/interfaces/jwt-payload.interface";
 
 @Injectable()
@@ -46,18 +48,28 @@ export class NotificationsService {
   }
 
   /**
-   * Liste les notifications d'un utilisateur, des plus récentes aux plus anciennes.
+   * Liste paginée des notifications d'un utilisateur, des plus récentes aux plus anciennes.
    * @throws {ForbiddenException} si le demandeur n'est ni admin ni le propriétaire
    */
-  async findAll(userId: string, requester: JwtAccessPayload): Promise<NotificationDto[]> {
+  async findAll(
+    userId: string,
+    requester: JwtAccessPayload,
+    query: PaginationQueryDto,
+  ): Promise<PaginatedDto<NotificationDto>> {
     this.assertAdminOrOwner(requester, userId);
 
-    const notifications = await this.notificationRepository.find({
+    const [notifications, total] = await this.notificationRepository.findAndCount({
       where: { userId },
       order: { createdAt: "DESC" },
+      skip: (query.page - 1) * query.limit,
+      take: query.limit,
     });
 
-    return notifications.map((n) => plainToInstance(NotificationDto, n));
+    return paginate(
+      notifications.map((n) => plainToInstance(NotificationDto, n)),
+      total,
+      query,
+    );
   }
 
   /**

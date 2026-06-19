@@ -13,6 +13,7 @@ const mockPlant: PlantEntity = {
 
 const mockRepository = {
   find: jest.fn(),
+  findAndCount: jest.fn(),
   findOne: jest.fn(),
   create: jest.fn(),
   save: jest.fn(),
@@ -37,24 +38,38 @@ describe("PlantsService", () => {
   // ─── findAll ───────────────────────────────────────────────────────────────
 
   describe("findAll", () => {
-    it("retourne toutes les plantes sans filtre", async () => {
-      mockRepository.find.mockResolvedValue([mockPlant]);
+    it("retourne une page de plantes avec les métadonnées", async () => {
+      mockRepository.findAndCount.mockResolvedValue([[mockPlant], 1]);
 
-      const result = await service.findAll({});
+      const result = await service.findAll({ page: 1, limit: 20 });
 
-      expect(mockRepository.find).toHaveBeenCalledWith({ where: {} });
-      expect(result).toHaveLength(1);
-      expect(result[0].name).toBe("Rose");
+      expect(mockRepository.findAndCount).toHaveBeenCalledWith({
+        where: {},
+        order: { name: "ASC" },
+        skip: 0,
+        take: 20,
+      });
+      expect(result.items).toHaveLength(1);
+      expect(result.items[0].name).toBe("Rose");
+      expect(result.meta).toEqual({ total: 1, page: 1, limit: 20, pageCount: 1 });
     });
 
-    it("filtre par sunlightLevel", async () => {
-      mockRepository.find.mockResolvedValue([mockPlant]);
+    it("filtre par sunlightLevel et applique l'offset", async () => {
+      mockRepository.findAndCount.mockResolvedValue([[mockPlant], 5]);
 
-      await service.findAll({ sunlightLevel: SunlightLevel.FULL_SUN });
-
-      expect(mockRepository.find).toHaveBeenCalledWith({
-        where: { sunlightLevel: SunlightLevel.FULL_SUN },
+      const result = await service.findAll({
+        sunlightLevel: SunlightLevel.FULL_SUN,
+        page: 2,
+        limit: 2,
       });
+
+      expect(mockRepository.findAndCount).toHaveBeenCalledWith({
+        where: { sunlightLevel: SunlightLevel.FULL_SUN },
+        order: { name: "ASC" },
+        skip: 2,
+        take: 2,
+      });
+      expect(result.meta).toEqual({ total: 5, page: 2, limit: 2, pageCount: 3 });
     });
   });
 

@@ -1,9 +1,20 @@
-import { Controller, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Patch } from "@nestjs/common";
+import {
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Query,
+} from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { NotificationsService } from "./notifications.service";
 import { NotificationDto } from "./dto/notification.dto";
 import { CurrentUser } from "@/common/decorators/current-user.decorator";
 import { ErrorResponseDTO } from "@/common/dto/error-response.dto";
+import { PaginatedDto } from "@/common/dto/paginated.dto";
+import { PaginationQueryDto } from "@/common/dto/pagination-query.dto";
 import type { JwtAccessPayload } from "@/modules/token/interfaces/jwt-payload.interface";
 
 @ApiBearerAuth()
@@ -12,15 +23,16 @@ import type { JwtAccessPayload } from "@/modules/token/interfaces/jwt-payload.in
 export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
 
-  @ApiOperation({ summary: "List a user's notifications (admin or owner)" })
-  @ApiResponse({ status: 200, type: [NotificationDto] })
+  @ApiOperation({ summary: "List a user's notifications, paginated (admin or owner)" })
+  @ApiResponse({ status: 200, type: PaginatedDto })
   @ApiResponse({ status: 403, description: "Forbidden", type: ErrorResponseDTO })
   @Get()
   findAll(
     @Param("userId", ParseUUIDPipe) userId: string,
     @CurrentUser() user: JwtAccessPayload,
-  ): Promise<NotificationDto[]> {
-    return this.notificationsService.findAll(userId, user);
+    @Query() query: PaginationQueryDto,
+  ): Promise<PaginatedDto<NotificationDto>> {
+    return this.notificationsService.findAll(userId, user, query);
   }
 
   @ApiOperation({ summary: "Mark a notification as read (admin or owner)" })
