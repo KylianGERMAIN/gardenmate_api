@@ -3,6 +3,7 @@ import { ConsoleLogger, Logger, ValidationPipe, VersioningType } from '@nestjs/c
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import helmet from 'helmet';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 
 async function bootstrap() {
@@ -16,6 +17,8 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
   configService.getOrThrow('JWT_ACCESS_SECRET');
   configService.getOrThrow('JWT_REFRESH_SECRET');
+
+  app.use(helmet());
 
   app.enableCors({
     origin: configService.get('CORS_ORIGIN') || true,

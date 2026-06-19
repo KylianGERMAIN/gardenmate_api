@@ -1,9 +1,11 @@
 import { Controller, Get, VERSION_NEUTRAL } from "@nestjs/common";
 import { ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
+import { SkipThrottle } from "@nestjs/throttler";
 import { HealthService, type ReadinessResult } from "./health.service";
 import { Public } from "@/common/decorators/public.decorator";
 
 @Public()
+@SkipThrottle() // les probes santé sont appelées fréquemment : pas de throttling.
 @ApiTags("health")
 @Controller({ path: "health", version: VERSION_NEUTRAL })
 export class HealthController {
