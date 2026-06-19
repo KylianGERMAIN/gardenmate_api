@@ -10,6 +10,7 @@ import { UsersModule } from './modules/users/users.module';
 import { PlantsModule } from './modules/plants/plants.module';
 import { UserPlantsModule } from './modules/user-plants/user-plants.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { HealthModule } from './modules/health/health.module';
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
 import { RequestIdInterceptor } from './common/interceptors/request-id.interceptor';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
@@ -40,6 +41,7 @@ import { RolesGuard } from './common/guards/roles.guard';
     PlantsModule,
     UserPlantsModule,
     NotificationsModule,
+    HealthModule,
   ],
   controllers: [AppController],
   providers: [

@@ -1,12 +1,16 @@
 import { NestFactory } from '@nestjs/core';
-import { Logger, ValidationPipe, VersioningType } from '@nestjs/common';
+import { ConsoleLogger, Logger, ValidationPipe, VersioningType } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    // Logs JSON structurés en production (agrégation/parsing), lisibles en dev.
+    logger:
+      process.env.NODE_ENV === 'production' ? new ConsoleLogger({ json: true }) : undefined,
+  });
 
   // Fail-fast : vérifie les secrets après que ConfigModule ait chargé le .env
   const configService = app.get(ConfigService);
