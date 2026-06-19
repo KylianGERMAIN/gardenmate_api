@@ -77,6 +77,46 @@ describe("UsersController (e2e)", () => {
     });
   });
 
+  // ─── PATCH /api/v1/users/:id/location ─────────────────────────────────────
+
+  describe("PATCH /api/v1/users/:id/location", () => {
+    it("200 – propriétaire renseigne ses coordonnées", async () => {
+      const { accessToken, userId } = await getTokens(app);
+
+      const res = await request(app.getHttpServer())
+        .patch(`/api/v1/users/${userId}/location`)
+        .set(bearer(accessToken))
+        .send({ latitude: 48.8566, longitude: 2.3522 })
+        .expect(200);
+
+      expect(res.body.latitude).toBe(48.8566);
+      expect(res.body.longitude).toBe(2.3522);
+      expect(res.body.password).toBeUndefined();
+    });
+
+    it("400 – coordonnées hors bornes", async () => {
+      const { accessToken, userId } = await getTokens(app);
+
+      await request(app.getHttpServer())
+        .patch(`/api/v1/users/${userId}/location`)
+        .set(bearer(accessToken))
+        .send({ latitude: 200, longitude: 2.3522 })
+        .expect(400);
+    });
+
+    it("403 – un user ne peut pas modifier la localisation d'un autre", async () => {
+      const { userId: targetId } = await getTokens(app, TEST_USER);
+      const secondUser = { email: "second@test.com", password: "Abcd1234!" };
+      const { accessToken: secondToken } = await getTokens(app, secondUser);
+
+      await request(app.getHttpServer())
+        .patch(`/api/v1/users/${targetId}/location`)
+        .set(bearer(secondToken))
+        .send({ latitude: 48.8566, longitude: 2.3522 })
+        .expect(403);
+    });
+  });
+
   // ─── DELETE /api/v1/users/:id ─────────────────────────────────────────────
 
   describe("DELETE /api/v1/users/:id", () => {

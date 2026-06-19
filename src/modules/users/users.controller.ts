@@ -1,7 +1,18 @@
-import { Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+} from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { UsersService } from "./users.service";
 import { UserDto } from "./dto/user.dto";
+import { UpdateLocationDto } from "./dto/update-location.dto";
 import { CurrentUser } from "@/common/decorators/current-user.decorator";
 import { ErrorResponseDTO } from "@/common/dto/error-response.dto";
 import type { JwtAccessPayload } from "@/modules/token/interfaces/jwt-payload.interface";
@@ -22,6 +33,20 @@ export class UsersController {
     @CurrentUser() user: JwtAccessPayload,
   ): Promise<UserDto> {
     return this.usersService.findById(id, user);
+  }
+
+  @ApiOperation({ summary: "Update a user's location (admin or owner)" })
+  @ApiResponse({ status: 200, description: "Location updated", type: UserDto })
+  @ApiResponse({ status: 403, description: "Forbidden", type: ErrorResponseDTO })
+  @ApiResponse({ status: 404, description: "User not found", type: ErrorResponseDTO })
+  @Patch(":id/location")
+  @HttpCode(HttpStatus.OK)
+  async updateLocation(
+    @Param("id", ParseUUIDPipe) id: string,
+    @Body() dto: UpdateLocationDto,
+    @CurrentUser() user: JwtAccessPayload,
+  ): Promise<UserDto> {
+    return this.usersService.updateLocation(id, dto, user);
   }
 
   @ApiOperation({ summary: "Delete a user by ID (admin or owner)" })

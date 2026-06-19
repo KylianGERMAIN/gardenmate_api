@@ -19,6 +19,14 @@ export class UserEntity {
   @Column({ type: "enum", enum: UserRole, default: UserRole.USER })
   role: UserRole;
 
+  /** Latitude de l'utilisateur (pour la météo du moteur de soin). */
+  @Column({ type: "double precision", nullable: true })
+  latitude: number | null;
+
+  /** Longitude de l'utilisateur (pour la météo du moteur de soin). */
+  @Column({ type: "double precision", nullable: true })
+  longitude: number | null;
+
   @CreateDateColumn({ name: "created_at" })
   createdAt: Date;
 
