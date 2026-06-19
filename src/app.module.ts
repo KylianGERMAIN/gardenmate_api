@@ -2,6 +2,7 @@ import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -23,6 +24,8 @@ import { RolesGuard } from './common/guards/roles.guard';
     // directement (job.run()), et lancer de vrais timers cron à travers les apps
     // de test créées/fermées en série provoque du flaky (socket hang up / 401).
     ...(process.env.NODE_ENV === 'test' ? [] : [ScheduleModule.forRoot()]),
+    // Throttling global : 100 req/min par IP (surchargé plus strictement sur l'auth).
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
@@ -46,7 +49,10 @@ import { RolesGuard } from './common/guards/roles.guard';
   controllers: [AppController],
   providers: [
     AppService,
-    // Ordre important : JWT d'abord, puis rôles
+    // Throttling en tête (désactivé en test pour ne pas fausser la suite e2e), puis JWT, puis rôles.
+    ...(process.env.NODE_ENV === 'test'
+      ? []
+      : [{ provide: APP_GUARD, useClass: ThrottlerGuard }]),
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
     { provide: APP_INTERCEPTOR, useClass: RequestIdInterceptor },
