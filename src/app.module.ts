@@ -2,16 +2,16 @@ import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AppController } from './app.controller.js';
-import { AppService } from './app.service.js';
-import { AuthModule } from './modules/auth/auth.module.js';
-import { UsersModule } from './modules/users/users.module.js';
-import { PlantsModule } from './modules/plants/plants.module.js';
-import { UserPlantsModule } from './modules/user-plants/user-plants.module.js';
-import { RequestIdMiddleware } from './common/middleware/request-id.middleware.js';
-import { RequestIdInterceptor } from './common/interceptors/request-id.interceptor.js';
-import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard.js';
-import { RolesGuard } from './common/guards/roles.guard.js';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
+import { AuthModule } from './modules/auth/auth.module';
+import { UsersModule } from './modules/users/users.module';
+import { PlantsModule } from './modules/plants/plants.module';
+import { UserPlantsModule } from './modules/user-plants/user-plants.module';
+import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
+import { RequestIdInterceptor } from './common/interceptors/request-id.interceptor';
+import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
+import { RolesGuard } from './common/guards/roles.guard';
 
 @Module({
   imports: [
