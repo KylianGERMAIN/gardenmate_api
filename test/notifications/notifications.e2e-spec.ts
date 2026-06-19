@@ -76,6 +76,27 @@ describe("Notifications + reminders job (e2e)", () => {
     expect(read.body.isRead).toBe(true);
   });
 
+  it("POST /api/internal/run-reminders — 401 sans le secret interne", async () => {
+    await request(app.getHttpServer()).post("/api/internal/run-reminders").expect(401);
+  });
+
+  it("POST /api/internal/run-reminders — avec le secret, déclenche les rappels", async () => {
+    const { userId, token } = await setupGardenWithOverduePlant();
+
+    const res = await request(app.getHttpServer())
+      .post("/api/internal/run-reminders")
+      .set("x-internal-secret", "test_internal_secret_e2e")
+      .expect(200);
+
+    expect(res.body.reminders).toBeGreaterThanOrEqual(1);
+
+    const list = await request(app.getHttpServer())
+      .get(`/api/v1/users/${userId}/notifications`)
+      .set(bearer(token))
+      .expect(200);
+    expect(list.body.items.length).toBeGreaterThanOrEqual(1);
+  });
+
   it("403 – un autre user ne voit pas les notifications d'autrui", async () => {
     const { userId } = await setupGardenWithOverduePlant();
     const { accessToken: otherToken } = await getTokens(app, {

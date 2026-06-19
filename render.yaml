@@ -1,0 +1,26 @@
+# Render Blueprint — déploiement de l'API GardenMate (plan gratuit).
+# Base Postgres gérée séparément (Neon) → fournir DATABASE_URL en variable d'env.
+services:
+  - type: web
+    name: gardenmate-api
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: pnpm install --frozen-lockfile && pnpm run build
+    startCommand: pnpm run migration:run:prod && pnpm run start:prod
+    # Liveness (et NON readiness) : sur le plan gratuit, la base Neon se met en veille ;
+    # un health-check sur /ready (qui pingue la base) provoquerait des redémarrages en boucle.
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_ACCESS_SECRET
+        sync: false
+      - key: JWT_REFRESH_SECRET
+        sync: false
+      - key: CORS_ORIGIN
+        sync: false
+      - key: REMINDERS_SECRET
+        sync: false
