@@ -4,7 +4,9 @@ import { getRepositoryToken } from "@nestjs/typeorm";
 import { UserPlantsService } from "./user-plants.service";
 import { UserPlantEntity } from "./entities/user-plant.entity";
 import { CareEngineService } from "./care/care-engine.service";
+import { WeatherService } from "./weather/weather.service";
 import { CareStatus } from "./dto/care-recommendation.dto";
+import { UsersService } from "@/modules/users/users.service";
 import { SunlightLevel } from "@/modules/plants/entities/plant.entity";
 import { UserRole } from "@/modules/users/entities/user.entity";
 import type { JwtAccessPayload } from "@/modules/token/interfaces/jwt-payload.interface";
@@ -39,6 +41,12 @@ const mockRepo = {
   update: jest.fn(),
 };
 
+// Météo neutralisée : coefficient 1.0 → l'intervalle ajusté ne dépend que de l'exposition.
+const mockWeather = {
+  getWaterDemand: jest.fn().mockResolvedValue({ coefficient: 1.0, source: "season" }),
+};
+const mockUsers = { findLocation: jest.fn().mockResolvedValue(null) };
+
 describe("UserPlantsService", () => {
   let service: UserPlantsService;
 
@@ -47,6 +55,8 @@ describe("UserPlantsService", () => {
       providers: [
         UserPlantsService,
         CareEngineService,
+        { provide: WeatherService, useValue: mockWeather },
+        { provide: UsersService, useValue: mockUsers },
         { provide: getRepositoryToken(UserPlantEntity), useValue: mockRepo },
       ],
     }).compile();

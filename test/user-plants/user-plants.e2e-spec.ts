@@ -185,8 +185,13 @@ describe("UserPlantsController (e2e)", () => {
       expect(res.body[0].status).toBe("OVERDUE");
       expect(res.body[0].plantName).toBe("Ficus lyrata");
       expect(res.body[0].adjustedIntervalDays).toBeGreaterThan(0);
+      // Sans géoloc sur l'utilisateur → repli saisonnier, pas d'appel réseau.
       expect(res.body[0].factors).toEqual(
-        expect.objectContaining({ season: expect.any(Number), exposure: expect.any(Number) }),
+        expect.objectContaining({
+          demand: expect.any(Number),
+          exposure: expect.any(Number),
+          source: "season",
+        }),
       );
     });
 
