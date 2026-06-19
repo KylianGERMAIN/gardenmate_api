@@ -18,6 +18,12 @@ export class UserDto {
   @ApiProperty({ description: "Rôle de l'utilisateur", enum: UserRole, example: UserRole.USER })
   role: UserRole;
 
+  @ApiProperty({ description: "Latitude", example: 48.8566, nullable: true })
+  latitude?: number | null;
+
+  @ApiProperty({ description: "Longitude", example: 2.3522, nullable: true })
+  longitude?: number | null;
+
   @ApiProperty({
     description: "createdAt",
     example: "2025-06-15T14:30:00.000Z",
