@@ -76,19 +76,17 @@ export class UserPlantsService {
 
   /**
    * Retourne les plantes d'un utilisateur dont l'arrosage est dépassé (statut OVERDUE),
-   * d'après le moteur de soin (fréquence ajustée selon saison et exposition).
+   * d'après le moteur de soin.
    * @throws {ForbiddenException} si le demandeur n'est ni admin ni le propriétaire
    */
   async findNeedingWater(userId: string, requester: JwtAccessPayload): Promise<UserPlantDto[]> {
     this.assertAdminOrOwner(requester, userId);
 
-    const now = new Date();
-    const { coefficient } = await this.resolveWaterDemand(userId, now);
-    const userPlants = await this.userPlantRepository.find({ where: { userId } });
+    const { assessments } = await this.buildAssessments(userId, new Date());
 
-    return userPlants
-      .filter((up) => this.careEngine.assess(up, coefficient, now).status === CareStatus.OVERDUE)
-      .map((up) => plainToInstance(UserPlantDto, up));
+    return assessments
+      .filter(({ assessment }) => assessment.status === CareStatus.OVERDUE)
+      .map(({ userPlant }) => plainToInstance(UserPlantDto, userPlant));
   }
 
   /**
@@ -99,22 +97,39 @@ export class UserPlantsService {
   async getCarePlan(userId: string, requester: JwtAccessPayload): Promise<CareRecommendationDto[]> {
     this.assertAdminOrOwner(requester, userId);
 
-    const now = new Date();
-    const { coefficient, source } = await this.resolveWaterDemand(userId, now);
-    const userPlants = await this.userPlantRepository.find({ where: { userId } });
+    const { assessments, source } = await this.buildAssessments(userId, new Date());
 
-    return userPlants
-      .map((up) => this.toRecommendation(up, this.careEngine.assess(up, coefficient, now), source))
+    return assessments
+      .map(({ userPlant, assessment }) => this.toRecommendation(userPlant, assessment, source))
       .sort(
         (a, b) =>
           UserPlantsService.STATUS_ORDER[a.status] - UserPlantsService.STATUS_ORDER[b.status],
       );
   }
 
-  /** Résout le coefficient de demande en eau de l'utilisateur (météo réelle ou saison). */
-  private async resolveWaterDemand(userId: string, now: Date) {
+  /**
+   * Évalue toutes les plantes d'un utilisateur via le moteur de soin, le coefficient
+   * de demande en eau étant résolu une seule fois (météo réelle ou repli saisonnier).
+   * Source unique de calcul partagée par `findNeedingWater` et `getCarePlan`.
+   */
+  private async buildAssessments(
+    userId: string,
+    now: Date,
+  ): Promise<{
+    assessments: { userPlant: UserPlantEntity; assessment: CareAssessment }[];
+    source: "weather" | "season";
+  }> {
     const location = await this.usersService.findLocation(userId);
-    return this.weatherService.getWaterDemand(location, now);
+    const { coefficient, source } = await this.weatherService.getWaterDemand(location, now);
+    const userPlants = await this.userPlantRepository.find({ where: { userId } });
+
+    return {
+      source,
+      assessments: userPlants.map((userPlant) => ({
+        userPlant,
+        assessment: this.careEngine.assess(userPlant, coefficient, now),
+      })),
+    };
   }
 
   /**

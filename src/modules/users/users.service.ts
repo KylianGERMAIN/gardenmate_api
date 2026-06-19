@@ -80,7 +80,10 @@ export class UsersService {
    * Usage interne (l'autorisation est gérée par l'appelant).
    */
   async findLocation(id: string): Promise<UserLocation | null> {
-    const user = await this.userRepository.findOne({ where: { id } });
+    const user = await this.userRepository.findOne({
+      where: { id },
+      select: ["latitude", "longitude"],
+    });
 
     if (!user || user.latitude === null || user.longitude === null) return null;
 

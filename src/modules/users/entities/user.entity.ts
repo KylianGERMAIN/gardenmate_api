@@ -20,11 +20,11 @@ export class UserEntity {
   role: UserRole;
 
   /** Latitude de l'utilisateur (pour la météo du moteur de soin). */
-  @Column({ type: "double precision", nullable: true })
+  @Column({ type: "double precision", nullable: true, name: "latitude" })
   latitude: number | null;
 
   /** Longitude de l'utilisateur (pour la météo du moteur de soin). */
-  @Column({ type: "double precision", nullable: true })
+  @Column({ type: "double precision", nullable: true, name: "longitude" })
   longitude: number | null;
 
   @CreateDateColumn({ name: "created_at" })

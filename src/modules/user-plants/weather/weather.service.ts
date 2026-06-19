@@ -14,9 +14,14 @@ const CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6 h
 const ET0_REFERENCE = 3.5;
 const COEF_MIN = 0.4;
 const COEF_MAX = 1.6;
+/** Plafond du cache : borne la mémoire, éviction du plus ancien au-delà. */
+const MAX_CACHE_ENTRIES = 1000;
 
-/** Coefficient saisonnier de secours par mois (index 0 = janvier). */
-// ponytail: fallback hémisphère nord en dur, utilisé sans géoloc ou si l'API échoue.
+/**
+ * Coefficient saisonnier de secours par mois, indexé sur l'hémisphère nord
+ * (index 0 = janvier). Pour une localisation de l'hémisphère sud, l'index est
+ * décalé de 6 mois ; sans localisation connue, l'hémisphère nord est supposé.
+ */
 const SEASON_COEFFICIENTS = [0.6, 0.6, 1.1, 1.1, 1.1, 1.3, 1.3, 1.3, 1.0, 1.0, 1.0, 0.6];
 
 /**
@@ -38,7 +43,7 @@ export class WeatherService {
    */
   async getWaterDemand(location: UserLocation | null, now: Date): Promise<WaterDemand> {
     if (!location) {
-      return { coefficient: this.seasonalCoefficient(now), source: "season" };
+      return { coefficient: this.seasonalCoefficient(now, null), source: "season" };
     }
 
     const cached = this.readCache(location, now);
@@ -52,8 +57,9 @@ export class WeatherService {
       this.writeCache(location, coefficient, now);
       return { coefficient, source: "weather" };
     } catch (err) {
-      this.logger.warn(`Open-Meteo indisponible, repli saisonnier: ${String(err)}`);
-      return { coefficient: this.seasonalCoefficient(now), source: "season" };
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.warn(`Open-Meteo indisponible, repli saisonnier: ${message}`);
+      return { coefficient: this.seasonalCoefficient(now, location), source: "season" };
     }
   }
 
@@ -90,9 +96,14 @@ export class WeatherService {
     }
   }
 
-  /** Coefficient saisonnier de secours pour la date courante. */
-  private seasonalCoefficient(now: Date): number {
-    return SEASON_COEFFICIENTS[now.getMonth()];
+  /**
+   * Coefficient saisonnier de secours. Décale de 6 mois pour l'hémisphère sud
+   * quand la localisation est connue ; suppose l'hémisphère nord sinon.
+   */
+  private seasonalCoefficient(now: Date, location: UserLocation | null): number {
+    const monthIndex =
+      location && location.latitude < 0 ? (now.getMonth() + 6) % 12 : now.getMonth();
+    return SEASON_COEFFICIENTS[monthIndex];
   }
 
   /** Borne le coefficient dans [COEF_MIN, COEF_MAX]. */
@@ -105,12 +116,22 @@ export class WeatherService {
   }
 
   private readCache(location: UserLocation, now: Date): number | null {
-    const entry = this.cache.get(this.cacheKey(location));
-    if (!entry || entry.expiresAt <= now.getTime()) return null;
+    const key = this.cacheKey(location);
+    const entry = this.cache.get(key);
+    if (!entry) return null;
+    if (entry.expiresAt <= now.getTime()) {
+      this.cache.delete(key); // purge l'entrée morte au lieu de la laisser fuir
+      return null;
+    }
     return entry.coefficient;
   }
 
   private writeCache(location: UserLocation, coefficient: number, now: Date): void {
+    // Borne la mémoire : au plafond, évince l'entrée la plus anciennement insérée.
+    if (this.cache.size >= MAX_CACHE_ENTRIES) {
+      const oldestKey = this.cache.keys().next().value;
+      if (oldestKey !== undefined) this.cache.delete(oldestKey);
+    }
     this.cache.set(this.cacheKey(location), {
       coefficient,
       expiresAt: now.getTime() + CACHE_TTL_MS,
