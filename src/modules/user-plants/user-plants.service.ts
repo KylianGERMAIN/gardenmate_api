@@ -49,10 +49,10 @@ export class UserPlantsService {
 
   /**
    * Liste les plantes d'un utilisateur avec le détail de la plante.
-   * @throws {ForbiddenException} si le demandeur n'est pas le propriétaire
+   * @throws {ForbiddenException} si le demandeur n'est ni admin ni le propriétaire
    */
   async findAll(userId: string, requester: JwtAccessPayload): Promise<UserPlantDto[]> {
-    this.assertOwner(requester, userId);
+    this.assertAdminOrOwner(requester, userId);
 
     const userPlants = await this.userPlantRepository.find({ where: { userId } });
 

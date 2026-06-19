@@ -115,6 +115,30 @@ describe("UserPlantsController (e2e)", () => {
         .set(bearer(otherToken))
         .expect(403);
     });
+
+    it("200 – admin peut lister le jardin d'un autre user", async () => {
+      const { adminToken, plantId } = await setupAdminAndPlant(app, ds);
+      const { accessToken: ownerToken, userId: ownerId } = await getTokens(app, {
+        email: "owner2@test.com",
+        password: "Abcd1234!",
+      });
+
+      // L'owner ajoute la plante à son propre jardin
+      await request(app.getHttpServer())
+        .post(`/api/v1/users/${ownerId}/plants`)
+        .set(bearer(ownerToken))
+        .send({ plantId })
+        .expect(201);
+
+      // L'admin lit le jardin de l'owner
+      const res = await request(app.getHttpServer())
+        .get(`/api/v1/users/${ownerId}/plants`)
+        .set(bearer(adminToken))
+        .expect(200);
+
+      expect(res.body).toHaveLength(1);
+      expect(res.body[0].plant.id).toBe(plantId);
+    });
   });
 
   // ─── GET /api/v1/users/:userId/plants/needing-water ──────────────────────

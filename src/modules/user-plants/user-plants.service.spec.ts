@@ -87,7 +87,15 @@ describe("UserPlantsService", () => {
       expect(result).toHaveLength(1);
     });
 
-    it("lève ForbiddenException si autre utilisateur", async () => {
+    it("admin peut lister les plantes d'un autre utilisateur", async () => {
+      mockRepo.find.mockResolvedValue([mockUserPlant]);
+
+      const result = await service.findAll("user-uuid", admin);
+
+      expect(result).toHaveLength(1);
+    });
+
+    it("lève ForbiddenException si non admin et non propriétaire", async () => {
       await expect(service.findAll("user-uuid", other)).rejects.toThrow(ForbiddenException);
     });
   });
